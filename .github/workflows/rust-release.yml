@@ -1,0 +1,190 @@
+name: Package Release
+
+on:
+  push:
+    tags:
+      - "v*"           # v2.0.0, v2.1.0-beta.1, v2.1.0-rc.1, etc.
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version (e.g. 2.0.0 or 2.1.0-beta.1)"
+        required: true
+      prerelease:
+        description: "Mark as prerelease?"
+        type: boolean
+        default: false
+
+
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-and-release:
+    name: Build & Release
+    runs-on: windows-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry & build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-release-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-release-
+
+      # ── Step 1: Determine version from tag or manual input ────────
+      - name: Determine version
+        id: version
+        shell: pwsh
+        run: |
+          if ("${{ github.event.inputs.version }}" -ne "") {
+            $fullVer = "${{ github.event.inputs.version }}" -replace "^v", ""
+          } else {
+            $fullVer = "${{ github.ref_name }}" -replace "^v", ""
+          }
+
+          # Parse: 2.0.0-beta.1 → base=2.0.0, prerelease=beta.1
+          if ($fullVer -match "^(\d+\.\d+\.\d+)(-(.+))?$") {
+            $baseVer = $Matches[1]
+            $preTag  = if ($Matches[3]) { $Matches[3] } else { "" }
+          } else {
+            $baseVer = $fullVer
+            $preTag  = ""
+          }
+
+          $isPrerelease = ($preTag -ne "") -or ("${{ github.event.inputs.prerelease }}" -eq "true")
+
+          echo "FULL_VERSION=$fullVer"   >> $env:GITHUB_OUTPUT
+          echo "BASE_VERSION=$baseVer"   >> $env:GITHUB_OUTPUT
+          echo "PRE_TAG=$preTag"         >> $env:GITHUB_OUTPUT
+          echo "IS_PRERELEASE=$isPrerelease" >> $env:GITHUB_OUTPUT
+
+          Write-Host "Full version: $fullVer"
+          Write-Host "Base version: $baseVer"
+          Write-Host "Pre-release tag: $preTag"
+          Write-Host "Is prerelease: $isPrerelease"
+
+      # ── Step 2: Inject version into source code before build ──────
+      - name: Inject version into app_meta.rs
+        shell: pwsh
+        run: |
+          $ver = "${{ steps.version.outputs.FULL_VERSION }}"
+          $file = "src/app_meta.rs"
+          $content = Get-Content $file -Raw
+
+          # Replace APP_VERSION constant
+          $content = $content -replace 'pub const APP_VERSION: &str = "[^"]*"', "pub const APP_VERSION: &str = `"$ver`""
+
+          Set-Content -Path $file -Value $content -NoNewline
+          Write-Host "Injected APP_VERSION = $ver into $file"
+          Get-Content $file
+
+      - name: Inject version into Cargo.toml
+        shell: pwsh
+        run: |
+          $baseVer = "${{ steps.version.outputs.BASE_VERSION }}"
+          $preTag  = "${{ steps.version.outputs.PRE_TAG }}"
+          $file = "Cargo.toml"
+          $content = Get-Content $file -Raw
+
+          # Cargo.toml version must be semver: 2.0.0-beta.1 is valid
+          if ($preTag -ne "") {
+            $cargoVer = "$baseVer-$preTag"
+          } else {
+            $cargoVer = $baseVer
+          }
+
+          $content = $content -replace 'version = "[^"]*"', "version = `"$cargoVer`""
+
+          Set-Content -Path $file -Value $content -NoNewline
+          Write-Host "Injected Cargo.toml version = $cargoVer"
+
+      # ── Step 3: Build ─────────────────────────────────────────────
+      - name: Build release binary
+        run: cargo build --release
+
+      # ── Step 4: Package ───────────────────────────────────────────
+      - name: Prepare release package
+        shell: pwsh
+        run: |
+          $ver = "${{ steps.version.outputs.FULL_VERSION }}"
+          $outDir = "release-package"
+          New-Item -ItemType Directory -Force -Path $outDir
+
+          # Copy binary
+          Copy-Item "target/release/vancesender.exe" "$outDir/"
+
+          # Copy web UI if present (for WebUI LAN access)
+          if (Test-Path "app/web") {
+            New-Item -ItemType Directory -Force -Path "$outDir/app/web"
+            Copy-Item -Recurse "app/web/*" "$outDir/app/web/"
+          }
+
+          # Write version file for runtime checks
+          @{
+            version    = $ver
+            build_date = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
+            commit     = "${{ github.sha }}"
+          } | ConvertTo-Json | Out-File -Encoding utf8 "$outDir/version.json"
+
+          # Create default config
+          @"
+          # VanceSender v$ver 配置文件
+          sender:
+            method: clipboard
+            chat_open_key: t
+            delay_open_chat: 450
+            delay_after_paste: 160
+            delay_after_send: 260
+            delay_between_lines: 1800
+            focus_timeout: 8000
+            retry_count: 3
+          server:
+            host: "127.0.0.1"
+            port: 8730
+            lan_access: false
+          ai:
+            default_provider: ""
+            providers: []
+          quick_overlay:
+            enabled: false
+            trigger_hotkey: f7
+          "@ | Out-File -Encoding utf8 "$outDir/config.yaml"
+
+          Write-Host "Release package prepared for v$ver"
+
+      - name: Create ZIP archive
+        shell: pwsh
+        run: |
+          $ver = "${{ steps.version.outputs.FULL_VERSION }}"
+          Compress-Archive -Path "release-package/*" -DestinationPath "VanceSenderR-v${ver}-windows-x64.zip"
+
+      # ── Step 5: Upload & Release ──────────────────────────────────
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: VanceSenderR-v${{ steps.version.outputs.FULL_VERSION }}-windows-x64
+          path: VanceSenderR-v${{ steps.version.outputs.FULL_VERSION }}-windows-x64.zip
+          retention-days: 90
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "VanceSender v${{ steps.version.outputs.FULL_VERSION }}"
+          tag_name: ${{ github.ref_name }}
+          files: VanceSenderR-v${{ steps.version.outputs.FULL_VERSION }}-windows-x64.zip
+          generate_release_notes: true
+          draft: false
+          prerelease: ${{ steps.version.outputs.IS_PRERELEASE == 'True' }}
