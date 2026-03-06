@@ -1,12 +1,7 @@
 /// System tray icon with context menu — using tray-icon + muda crates.
 
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
-
 use tray_icon::menu::{Menu, MenuEvent, MenuItem};
 use tray_icon::{Icon, TrayIcon, TrayIconBuilder};
-
-use crate::app_meta::APP_NAME;
 
 /// Commands that the tray icon can emit.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -149,7 +144,7 @@ fn create_tray_icon() -> Option<Icon> {
     }
 
     // Draw a simple "V" shape in the center
-    let center_x = size / 2;
+    let _center_x = size / 2;
     let draw_pixel = |rgba: &mut [u8], x: u32, y: u32| {
         if x < size && y < size {
             let idx = ((y * size + x) * 4) as usize;

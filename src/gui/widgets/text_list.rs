@@ -22,7 +22,7 @@ pub fn render_text_list(
     let mut to_move_down = None;
 
     for (i, item) in items.iter().enumerate() {
-        let item_id = format!("{id_salt}_item_{i}");
+        let _item_id = format!("{id_salt}_item_{i}");
 
         egui::Frame::NONE
             .fill(theme::BG_CARD)
@@ -40,7 +40,7 @@ pub fn render_text_list(
 
                     // Type badge
                     let (type_color, type_label) = type_badge_info(&item.r#type);
-                    let badge_rect = ui.label(
+                    let _badge_rect = ui.label(
                         egui::RichText::new(type_label)
                             .size(11.0)
                             .color(type_color)

@@ -40,7 +40,7 @@ pub enum SettingsTab {
     Overlay,
 }
 
-pub fn render(ui: &mut egui::Ui, state: &SharedState, ss: &mut SettingsState, toasts: &mut egui_notify::Toasts) {
+pub fn render(ui: &mut egui::Ui, _state: &SharedState, ss: &mut SettingsState, toasts: &mut egui_notify::Toasts) {
     if !ss.loaded {
         load_settings(ss);
         ss.loaded = true;

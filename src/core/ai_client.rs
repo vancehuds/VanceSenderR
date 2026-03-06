@@ -3,9 +3,7 @@
 use std::collections::HashMap;
 
 use reqwest::Client;
-use serde::{Deserialize, Serialize};
 use serde_json::{json, Value as JsonValue};
-use tokio::sync::Mutex;
 
 use crate::config::{self, ProviderConfig};
 use crate::core::presets::TextLine;

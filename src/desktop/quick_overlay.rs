@@ -5,13 +5,13 @@
 /// - When triggered, sends a command to the GUI thread via a channel
 /// - A Win32 `WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE` window shows send status
 
-use std::collections::HashMap;
+
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
 
-use parking_lot::Mutex;
+
 
 #[cfg(windows)]
 use windows::Win32::UI::Input::KeyboardAndMouse::GetAsyncKeyState;

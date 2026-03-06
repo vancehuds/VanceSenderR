@@ -14,7 +14,7 @@ pub struct PresetsState {
     pub all_tags: Vec<String>,
 }
 
-pub fn render(ui: &mut egui::Ui, state: &SharedState, ps: &mut PresetsState, toasts: &mut egui_notify::Toasts) {
+pub fn render(ui: &mut egui::Ui, _state: &SharedState, ps: &mut PresetsState, toasts: &mut egui_notify::Toasts) {
     // Lazy-load
     if !ps.loaded {
         reload_presets(ps);
@@ -89,7 +89,7 @@ pub fn render(ui: &mut egui::Ui, state: &SharedState, ps: &mut PresetsState, toa
 
     // Preset list
     let search_lower = ps.search.to_lowercase();
-    let filtered: Vec<&Preset> = ps
+    let filtered: Vec<Preset> = ps
         .presets
         .iter()
         .filter(|p| {
@@ -103,6 +103,7 @@ pub fn render(ui: &mut egui::Ui, state: &SharedState, ps: &mut PresetsState, toa
             }
             true
         })
+        .cloned()
         .collect();
 
     if filtered.is_empty() {

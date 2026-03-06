@@ -8,7 +8,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::config::ai_history_dir;
 use crate::core::presets::TextLine;
-use crate::error::AppResult;
 
 const MAX_HISTORY: usize = 100;
 

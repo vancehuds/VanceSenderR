@@ -1,6 +1,6 @@
 /// Custom frameless titlebar with window controls.
 
-use eframe::egui::{self, Color32, Sense, Stroke, Vec2};
+use eframe::egui::{self, Sense, Vec2};
 
 use super::theme;
 

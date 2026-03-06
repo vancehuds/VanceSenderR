@@ -7,7 +7,7 @@ use crate::gui::theme;
 use crate::gui::{AsyncResult, AsyncTx};
 use crate::config;
 use crate::core::history;
-use crate::core::presets::{self, Preset, TextLine};
+use crate::core::presets::{self, Preset};
 use crate::core::sender::SenderConfig;
 
 #[derive(Default)]
@@ -116,7 +116,7 @@ pub fn render(
                             let sender = state_clone.sender.read();
                             state_clone.stats.write().record_batch();
 
-                            sender.send_batch_sync(&texts, &sender_cfg, None, |progress| {
+                            let _ = sender.send_batch_sync(&texts, &sender_cfg, None, |progress| {
                                 if progress.status == "sent" {
                                     if let Some(ref text) = progress.text {
                                         history::record_send(text, true, "gui-quick");
@@ -144,7 +144,7 @@ pub fn render(
                 ui.add_space(8.0);
 
                 egui::ScrollArea::vertical().show(ui, |ui| {
-                    for (i, line) in preset.texts.iter().enumerate() {
+                    for (_i, line) in preset.texts.iter().enumerate() {
                         egui::Frame::NONE
                             .fill(theme::BG_CARD)
                             .corner_radius(8.0)

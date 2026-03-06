@@ -316,7 +316,7 @@ fn merge_defaults(cfg: &mut YamlValue) {
 
 pub fn default_config() -> YamlValue {
     serde_yaml::from_str(
-        r#"
+        r##"
 server:
   host: "127.0.0.1"
   port: 8730
@@ -361,7 +361,7 @@ ai:
   default_provider: ""
   system_prompt: ""
   custom_headers: {}
-"#,
+"##,
     )
     .unwrap()
 }

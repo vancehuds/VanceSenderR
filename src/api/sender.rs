@@ -90,7 +90,7 @@ pub async fn send_batch(
         let sender = state_clone.sender.read();
         state_clone.stats.write().record_batch();
 
-        sender.send_batch_sync(&texts, &sender_cfg, delay_between, |progress| {
+        let _ = sender.send_batch_sync(&texts, &sender_cfg, delay_between, |progress| {
             // Record to history
             if progress.status == "sent" {
                 if let Some(ref text) = progress.text {

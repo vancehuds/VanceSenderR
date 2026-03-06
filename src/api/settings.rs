@@ -154,7 +154,7 @@ pub struct WindowActionRequest {
     pub action: String,
 }
 
-pub async fn post_desktop_window_action(Json(body): Json<WindowActionRequest>) -> Json<JsonValue> {
+pub async fn post_desktop_window_action(Json(_body): Json<WindowActionRequest>) -> Json<JsonValue> {
     // Placeholder — will be connected to desktop module
     Json(json!({"success": false, "message": "native GUI handles window actions"}))
 }

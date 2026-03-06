@@ -22,7 +22,7 @@ pub struct AiState {
 
 pub fn render(
     ui: &mut egui::Ui,
-    state: &SharedState,
+    _state: &SharedState,
     ai: &mut AiState,
     toasts: &mut egui_notify::Toasts,
     async_tx: &AsyncTx,

@@ -5,7 +5,6 @@ use std::path::PathBuf;
 
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use serde_json::Value as JsonValue;
 
 use crate::config::presets_dir;
 use crate::error::{AppError, AppResult};

@@ -1,6 +1,6 @@
 /// GitHub update checker with caching and conditional requests.
 
-use std::collections::HashMap;
+
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
@@ -9,7 +9,7 @@ use serde::Serialize;
 use serde_json::Value as JsonValue;
 
 use crate::app_meta::{APP_VERSION, GITHUB_REPOSITORY};
-use crate::error::{AppError, AppResult};
+
 
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
 const CACHE_TTL: Duration = Duration::from_secs(600);

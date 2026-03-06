@@ -104,6 +104,7 @@ async fn auth_middleware(
         .and_then(|v| v.to_str().ok())
         .unwrap_or("");
 
+    let query_token;
     let provided_token = if let Some(bearer) = auth_header.strip_prefix("Bearer ") {
         bearer.trim()
     } else {
@@ -113,12 +114,12 @@ async fn auth_middleware(
         let params: Vec<(String, String)> = url::form_urlencoded::parse(query.as_bytes())
             .map(|(k, v)| (k.to_string(), v.to_string()))
             .collect();
-        let token_value = params
+        query_token = params
             .iter()
             .find(|(k, _)| k == "vs_token" || k == "token")
             .map(|(_, v)| v.clone())
             .unwrap_or_default();
-        token_value
+        &query_token
     };
 
     if provided_token == token {

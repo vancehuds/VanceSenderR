@@ -16,8 +16,6 @@ use serde::{Deserialize, Serialize};
 use windows::Win32::UI::Input::KeyboardAndMouse::*;
 #[cfg(windows)]
 use windows::Win32::UI::WindowsAndMessaging::*;
-#[cfg(windows)]
-use windows::Win32::Foundation::*;
 
 // ── Constants ──────────────────────────────────────────────────────────
 
@@ -394,7 +392,7 @@ impl KeyboardSender {
                 release_pressed_modifiers();
 
                 let mut last_err = None;
-                for attempt in 0..config.retry_count {
+                for _attempt in 0..config.retry_count {
                     let vk = chat_open_vk(&config.chat_open_key);
                     press(vk, 40);
                     thread::sleep(Duration::from_millis(config.delay_open_chat));

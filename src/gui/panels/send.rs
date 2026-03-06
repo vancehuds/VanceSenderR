@@ -5,7 +5,7 @@ use eframe::egui;
 use crate::state::SharedState;
 use crate::config;
 use crate::core::history;
-use crate::core::sender::{SenderConfig, SendProgress};
+use crate::core::sender::SenderConfig;
 use crate::gui::theme;
 use crate::gui::{AsyncResult, AsyncTx};
 
@@ -46,7 +46,7 @@ pub fn render(
     ui: &mut egui::Ui,
     state: &SharedState,
     send: &mut SendState,
-    toasts: &mut egui_notify::Toasts,
+    _toasts: &mut egui_notify::Toasts,
     async_tx: &AsyncTx,
     tokio_handle: &tokio::runtime::Handle,
 ) {
@@ -95,7 +95,7 @@ pub fn render(
                     let sender = state_clone.sender.read();
                     state_clone.stats.write().record_batch();
 
-                    sender.send_batch_sync(
+                    let _ = sender.send_batch_sync(
                         &texts,
                         &sender_cfg,
                         None,

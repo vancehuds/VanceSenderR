@@ -160,7 +160,7 @@ impl VanceSenderApp {
                 AsyncResult::PublicConfigDone(r) => {
                     self.home_state.public_config = Some(r);
                 }
-                AsyncResult::AiGenerateDone { texts, provider_id } => {
+                AsyncResult::AiGenerateDone { texts, provider_id: _ } => {
                     self.ai_state.generating = false;
                     self.ai_state.generated_texts = texts;
                     self.ai_state.stream_content.clear();
@@ -174,7 +174,7 @@ impl VanceSenderApp {
                     self.ai_state.stream_content.push_str(&chunk);
                     ctx.request_repaint();
                 }
-                AsyncResult::AiStreamDone { texts, provider_id } => {
+                AsyncResult::AiStreamDone { texts, provider_id: _ } => {
                     self.ai_state.generating = false;
                     self.ai_state.generated_texts = texts;
                     self.ai_state.stream_content.clear();

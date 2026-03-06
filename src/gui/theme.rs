@@ -17,6 +17,9 @@ pub const WARNING: Color32 = Color32::from_rgb(255, 177, 66);
 pub const DANGER: Color32 = Color32::from_rgb(255, 71, 87);
 
 pub fn apply_theme(ctx: &egui::Context) {
+    // ── Chinese font support ───────────────────────────────────────────
+    configure_fonts(ctx);
+
     let mut visuals = Visuals::dark();
 
     // Window
@@ -59,4 +62,50 @@ pub fn apply_theme(ctx: &egui::Context) {
     style.spacing.item_spacing = egui::vec2(8.0, 6.0);
     style.spacing.button_padding = egui::vec2(12.0, 6.0);
     ctx.set_style(style);
+}
+
+/// Load a system Chinese font as fallback so CJK characters render properly.
+fn configure_fonts(ctx: &egui::Context) {
+    use egui::{FontData, FontDefinitions, FontFamily};
+
+    let mut fonts = FontDefinitions::default();
+
+    // Try loading a Chinese font from the system fonts directory.
+    // Priority: Microsoft YaHei > SimHei > NotoSansSC
+    let candidate_paths: &[&str] = &[
+        "C:\\Windows\\Fonts\\msyh.ttc",     // Microsoft YaHei (Win 7+)
+        "C:\\Windows\\Fonts\\msyhbd.ttc",   // Microsoft YaHei Bold
+        "C:\\Windows\\Fonts\\simhei.ttf",   // SimHei
+        "C:\\Windows\\Fonts\\simsun.ttc",   // SimSun
+        "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",  // Linux
+        "/usr/share/fonts/noto-cjk/NotoSansCJK-Regular.ttc",       // Linux alt
+        "/System/Library/Fonts/PingFang.ttc",                       // macOS
+    ];
+
+    let mut loaded = false;
+    for path in candidate_paths {
+        if let Ok(font_data) = std::fs::read(path) {
+            tracing::info!("Loaded Chinese font from: {path}");
+            fonts.font_data.insert(
+                "chinese_font".to_owned(),
+                std::sync::Arc::new(FontData::from_owned(font_data)),
+            );
+            // Insert at the beginning of the fallback list for Proportional
+            if let Some(family) = fonts.families.get_mut(&FontFamily::Proportional) {
+                family.insert(1, "chinese_font".to_owned());
+            }
+            // Also add to Monospace family as fallback
+            if let Some(family) = fonts.families.get_mut(&FontFamily::Monospace) {
+                family.insert(1, "chinese_font".to_owned());
+            }
+            loaded = true;
+            break;
+        }
+    }
+
+    if !loaded {
+        tracing::warn!("No Chinese font found on system — CJK characters may not render correctly");
+    }
+
+    ctx.set_fonts(fonts);
 }
