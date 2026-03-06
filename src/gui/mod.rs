@@ -79,22 +79,12 @@ pub type AsyncRx = std::sync::mpsc::Receiver<AsyncResult>;
 // ── Quick overlay shared state ─────────────────────────────────────────
 // Shared between the main viewport and the overlay deferred viewport.
 
+#[derive(Default)]
 pub struct QuickOverlayState {
     pub presets: Vec<Preset>,
     pub selected_preset_idx: Option<usize>,
     pub loaded: bool,
     pub status_message: Option<String>,
-}
-
-impl Default for QuickOverlayState {
-    fn default() -> Self {
-        Self {
-            presets: Vec::new(),
-            selected_preset_idx: None,
-            loaded: false,
-            status_message: None,
-        }
-    }
 }
 
 /// Main application state for the egui GUI.

@@ -86,10 +86,12 @@ mod win32 {
                     }
 
                     // Create a reasonable font
-                    let mut lf = LOGFONTW::default();
-                    lf.lfHeight = -14;
-                    lf.lfWeight = 400;
-                    lf.lfCharSet = FONT_CHARSET(1); // DEFAULT_CHARSET
+                    let mut lf = LOGFONTW {
+                        lfHeight: -14,
+                        lfWeight: 400,
+                        lfCharSet: FONT_CHARSET(1), // DEFAULT_CHARSET
+                        ..Default::default()
+                    };
                     let font_name: Vec<u16> = "Segoe UI\0".encode_utf16().collect();
                     let copy_len = font_name.len().min(32);
                     lf.lfFaceName[..copy_len].copy_from_slice(&font_name[..copy_len]);
