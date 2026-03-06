@@ -1,4 +1,4 @@
-/// Presets management panel — list, create, edit, delete, import/export.
+//! Presets management panel — list, create, edit, delete, import/export.
 
 use eframe::egui;
 use crate::state::SharedState;
@@ -32,7 +32,7 @@ pub fn render(ui: &mut egui::Ui, _state: &SharedState, ps: &mut PresetsState, to
     // Header
     ui.horizontal(|ui| {
         ui.label(
-            egui::RichText::new("📋 预设管理")
+            egui::RichText::new("≡ 预设管理")
                 .size(18.0)
                 .color(theme::TEXT_PRIMARY)
                 .strong(),
@@ -40,7 +40,7 @@ pub fn render(ui: &mut egui::Ui, _state: &SharedState, ps: &mut PresetsState, to
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
             if ui
                 .add(
-                    egui::Button::new("➕ 新建预设")
+                    egui::Button::new("+ 新建预设")
                         .fill(theme::ACCENT),
                 )
                 .clicked()
@@ -51,13 +51,13 @@ pub fn render(ui: &mut egui::Ui, _state: &SharedState, ps: &mut PresetsState, to
                 ps.form_tags_str.clear();
                 ps.form_texts = vec![TextLine { r#type: "me".into(), content: String::new() }];
             }
-            if ui.button("📥 导入").clicked() {
+            if ui.button("⇩ 导入").clicked() {
                 import_presets_dialog(ps, toasts);
             }
-            if ui.button("📤 导出全部").clicked() {
+            if ui.button("⇧ 导出全部").clicked() {
                 export_presets_dialog(ps, toasts);
             }
-            if ui.button("🔄 刷新").clicked() {
+            if ui.button("↻ 刷新").clicked() {
                 reload_presets(ps);
             }
         });
@@ -75,7 +75,7 @@ pub fn render(ui: &mut egui::Ui, _state: &SharedState, ps: &mut PresetsState, to
     ui.horizontal(|ui| {
         ui.add(
             egui::TextEdit::singleline(&mut ps.search)
-                .hint_text("🔍 搜索预设...")
+                .hint_text("搜索预设...")
                 .desired_width(250.0),
         );
 
@@ -125,7 +125,7 @@ pub fn render(ui: &mut egui::Ui, _state: &SharedState, ps: &mut PresetsState, to
         ui.add_space(40.0);
         ui.vertical_centered(|ui| {
             ui.label(
-                egui::RichText::new("📋 暂无预设")
+                egui::RichText::new("暂无预设")
                     .size(16.0)
                     .color(theme::TEXT_MUTED),
             );
@@ -179,16 +179,16 @@ pub fn render(ui: &mut egui::Ui, _state: &SharedState, ps: &mut PresetsState, to
                                 |ui| {
                                     if ui
                                         .small_button(
-                                            egui::RichText::new("🗑").color(theme::DANGER),
+                                            egui::RichText::new("✖").color(theme::DANGER),
                                         )
                                         .clicked()
                                     {
                                         action = Some(PresetAction::Delete(preset.id.clone()));
                                     }
-                                    if ui.small_button("✏ 编辑").clicked() {
+                                    if ui.small_button("✎ 编辑").clicked() {
                                         action = Some(PresetAction::Edit(preset.clone()));
                                     }
-                                    if ui.small_button("📤 导出").clicked() {
+                                    if ui.small_button("⇧ 导出").clicked() {
                                         action = Some(PresetAction::ExportSingle(preset.clone()));
                                     }
                                 },
@@ -237,7 +237,7 @@ const TEXT_TYPES: &[(&str, &str)] = &[
 
 fn render_preset_form(ui: &mut egui::Ui, ps: &mut PresetsState, toasts: &mut egui_notify::Toasts) {
     let is_edit = ps.editing_id.is_some();
-    let title = if is_edit { "✏ 编辑预设" } else { "➕ 新建预设" };
+    let title = if is_edit { "✎ 编辑预设" } else { "+ 新建预设" };
 
     egui::Frame::NONE
         .fill(theme::BG_CARD)
@@ -327,7 +327,7 @@ fn render_preset_form(ui: &mut egui::Ui, ps: &mut PresetsState, toasts: &mut egu
 
             ui.add_space(8.0);
             ui.horizontal(|ui| {
-                if ui.add(egui::Button::new("✅ 保存").fill(theme::ACCENT)).clicked() {
+                if ui.add(egui::Button::new("✔ 保存").fill(theme::ACCENT)).clicked() {
                     if ps.form_name.trim().is_empty() {
                         toasts.error("预设名称不能为空");
                     } else {
@@ -376,7 +376,7 @@ fn render_preset_form(ui: &mut egui::Ui, ps: &mut PresetsState, toasts: &mut egu
                         }
                     }
                 }
-                if ui.button("❌ 取消").clicked() {
+                if ui.button("× 取消").clicked() {
                     ps.show_form = false;
                     ps.editing_id = None;
                 }

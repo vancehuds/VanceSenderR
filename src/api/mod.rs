@@ -1,4 +1,4 @@
-/// API route assembly + auth middleware.
+//! API route assembly + auth middleware.
 
 pub mod ai;
 pub mod presets;
@@ -81,7 +81,7 @@ pub fn build_router(state: SharedState) -> Router {
 
 /// Auth middleware — checks Bearer token.
 async fn auth_middleware(
-    axum::extract::State(state): axum::extract::State<SharedState>,
+    axum::extract::State(_state): axum::extract::State<SharedState>,
     request: Request,
     next: Next,
 ) -> Response {

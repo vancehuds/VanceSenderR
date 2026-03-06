@@ -1,4 +1,4 @@
-/// System tray icon with context menu — using tray-icon + muda crates.
+//! System tray icon with context menu — using tray-icon + muda crates.
 
 use tray_icon::menu::{Menu, MenuEvent, MenuItem};
 use tray_icon::{Icon, TrayIcon, TrayIconBuilder};
@@ -101,6 +101,7 @@ impl TrayManager {
         tracing::info!("System tray icon stopped");
     }
 
+    #[allow(dead_code)]
     pub fn is_started(&self) -> bool {
         self.started
     }

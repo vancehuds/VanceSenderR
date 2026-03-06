@@ -1,4 +1,4 @@
-/// Sidebar navigation with icon buttons.
+//! Sidebar navigation with icon buttons.
 
 use eframe::egui::{self, Color32, RichText, Vec2};
 
@@ -12,12 +12,12 @@ struct NavItem {
 }
 
 const NAV_ITEMS: &[NavItem] = &[
-    NavItem { icon: "🏠", label: "首页", panel: Panel::Home },
-    NavItem { icon: "📤", label: "发送", panel: Panel::Send },
-    NavItem { icon: "⚡", label: "快捷", panel: Panel::QuickSend },
-    NavItem { icon: "🤖", label: "AI", panel: Panel::AiGenerate },
-    NavItem { icon: "📋", label: "预设", panel: Panel::Presets },
-    NavItem { icon: "⚙", label: "设置", panel: Panel::Settings },
+    NavItem { icon: "\u{2302}", label: "首页", panel: Panel::Home },       // ⌂
+    NavItem { icon: "\u{2191}", label: "发送", panel: Panel::Send },       // ↑
+    NavItem { icon: "\u{26A1}", label: "快捷", panel: Panel::QuickSend },  // ⚡
+    NavItem { icon: "\u{25C6}", label: "AI", panel: Panel::AiGenerate },   // ◆
+    NavItem { icon: "\u{2261}", label: "预设", panel: Panel::Presets },     // ≡
+    NavItem { icon: "\u{2699}", label: "设置", panel: Panel::Settings },    // ⚙
 ];
 
 pub fn render_sidebar(ui: &mut egui::Ui, current_panel: &mut Panel) {

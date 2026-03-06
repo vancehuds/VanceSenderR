@@ -1,4 +1,4 @@
-/// Multi-provider AI client — OpenAI-compatible API endpoints.
+//! Multi-provider AI client — OpenAI-compatible API endpoints.
 
 use std::collections::HashMap;
 
@@ -11,7 +11,9 @@ use crate::error::{AppError, AppResult};
 
 // ── Constants ──────────────────────────────────────────────────────────
 
+#[allow(dead_code)]
 const MAX_RETRIES: u32 = 2;
+#[allow(dead_code)]
 const RETRY_BASE_DELAY_MS: u64 = 1000;
 
 static DEFAULT_SYSTEM_PROMPT: &str = concat!(

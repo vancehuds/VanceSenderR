@@ -1,10 +1,10 @@
-/// Quick overlay — global hotkey polling + floating status bar (Win32).
-///
-/// Architecture:
-/// - A background thread polls `GetAsyncKeyState` for the configured hotkey
-/// - When triggered, sends a command to the GUI thread via a channel
-/// - A Win32 `WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE` window shows send status
-
+//! Quick overlay — global hotkey polling + floating status bar (Win32).
+//!
+//! Architecture:
+//! - A background thread polls `GetAsyncKeyState` for the configured hotkey
+//! - When triggered, sends a command to the GUI thread via a channel
+//! - Calls `egui::Context::request_repaint` to wake the GUI loop
+//! - A Win32 `WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE` window shows send status
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -129,6 +129,7 @@ pub enum OverlayCommand {
     /// Hotkey was triggered — show quick panel
     HotkeyTriggered,
     /// Status update from send operation
+    #[allow(dead_code)]
     StatusUpdate { text: String, done: bool },
 }
 
@@ -140,6 +141,7 @@ pub struct QuickOverlay {
     poll_thread: Option<thread::JoinHandle<()>>,
     command_tx: Option<std::sync::mpsc::Sender<OverlayCommand>>,
     command_rx: Option<std::sync::mpsc::Receiver<OverlayCommand>>,
+    egui_ctx: Option<eframe::egui::Context>,
 }
 
 impl QuickOverlay {
@@ -151,7 +153,13 @@ impl QuickOverlay {
             poll_thread: None,
             command_tx: Some(tx),
             command_rx: Some(rx),
+            egui_ctx: None,
         }
+    }
+
+    /// Set the egui context so the polling thread can wake the GUI loop.
+    pub fn set_ctx(&mut self, ctx: eframe::egui::Context) {
+        self.egui_ctx = Some(ctx);
     }
 
     /// Start the hotkey polling background thread.
@@ -174,6 +182,7 @@ impl QuickOverlay {
         running.store(true, Ordering::SeqCst);
         let tx = self.command_tx.clone().unwrap();
         let interval = Duration::from_millis(poll_interval_ms.max(20));
+        let egui_ctx = self.egui_ctx.clone();
 
         let thread = thread::Builder::new()
             .name("quick-overlay-poll".into())
@@ -193,6 +202,9 @@ impl QuickOverlay {
                         if is_down && !hotkey_was_down {
                             // Rising edge — trigger
                             let _ = tx.send(OverlayCommand::HotkeyTriggered);
+                            if let Some(ref ctx) = egui_ctx {
+                                ctx.request_repaint();
+                            }
                         }
                         hotkey_was_down = is_down;
                     }
@@ -202,6 +214,9 @@ impl QuickOverlay {
                         let is_down = is_vk_pressed(vk);
                         if is_down && !mouse_was_down {
                             let _ = tx.send(OverlayCommand::HotkeyTriggered);
+                            if let Some(ref ctx) = egui_ctx {
+                                ctx.request_repaint();
+                            }
                         }
                         mouse_was_down = is_down;
                     }
@@ -233,6 +248,7 @@ impl QuickOverlay {
     }
 
     /// Send a status update (called from send operations).
+    #[allow(dead_code)]
     pub fn send_status(&self, text: &str, done: bool) {
         if let Some(ref tx) = self.command_tx {
             let _ = tx.send(OverlayCommand::StatusUpdate {
@@ -242,6 +258,7 @@ impl QuickOverlay {
         }
     }
 
+    #[allow(dead_code)]
     pub fn is_enabled(&self) -> bool {
         self.enabled
     }

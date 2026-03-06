@@ -1,4 +1,4 @@
-/// Remote public config fetcher — GitHub-hosted announcements.
+//! Remote public config fetcher — GitHub-hosted announcements.
 
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
@@ -12,6 +12,7 @@ use crate::app_meta::GITHUB_REPOSITORY;
 use crate::config;
 
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(5);
+#[allow(dead_code)]
 const DEFAULT_CACHE_TTL: Duration = Duration::from_secs(120);
 
 static HTTP_CLIENT: std::sync::OnceLock<Client> = std::sync::OnceLock::new();
@@ -26,13 +27,14 @@ fn client() -> &'static Client {
     })
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Default)]
 pub struct PublicConfigResult {
     pub success: bool,
     pub visible: bool,
     pub source_url: Option<String>,
     pub title: Option<String>,
     pub content: Option<String>,
+    #[serde(default)]
     pub message: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub fetched_at: Option<String>,
@@ -40,22 +42,6 @@ pub struct PublicConfigResult {
     pub link_url: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub link_text: Option<String>,
-}
-
-impl Default for PublicConfigResult {
-    fn default() -> Self {
-        Self {
-            success: false,
-            visible: false,
-            source_url: None,
-            title: None,
-            content: None,
-            message: String::new(),
-            fetched_at: None,
-            link_url: None,
-            link_text: None,
-        }
-    }
 }
 
 struct CacheEntry {

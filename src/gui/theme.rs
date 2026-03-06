@@ -1,4 +1,4 @@
-/// Dark theme with Glassmorphism-inspired styling.
+//! Dark theme with Glassmorphism-inspired styling.
 
 use eframe::egui::{self, Color32, CornerRadius, Shadow, Stroke, Visuals};
 
@@ -7,6 +7,7 @@ pub const BG_PANEL: Color32 = Color32::from_rgb(20, 25, 40);
 pub const BG_CARD: Color32 = Color32::from_rgb(28, 35, 55);
 pub const BG_INPUT: Color32 = Color32::from_rgb(22, 28, 45);
 pub const ACCENT: Color32 = Color32::from_rgb(108, 92, 231);
+#[allow(dead_code)]
 pub const ACCENT_HOVER: Color32 = Color32::from_rgb(130, 115, 245);
 pub const TEXT_PRIMARY: Color32 = Color32::from_rgb(230, 235, 245);
 pub const TEXT_SECONDARY: Color32 = Color32::from_rgb(140, 150, 170);
@@ -64,15 +65,40 @@ pub fn apply_theme(ctx: &egui::Context) {
     ctx.set_style(style);
 }
 
-/// Load a system Chinese font as fallback so CJK characters render properly.
+/// Load system fonts as fallbacks:
+/// 1. Segoe UI Symbol — for Unicode symbols (─ □ ✕ ⚙ ⚡ ⌂ etc.)
+/// 2. Chinese font — for CJK characters
 fn configure_fonts(ctx: &egui::Context) {
     use egui::{FontData, FontDefinitions, FontFamily};
 
     let mut fonts = FontDefinitions::default();
 
-    // Try loading a Chinese font from the system fonts directory.
+    // ── 1. Symbol font (Segoe UI Symbol on Windows) ──────────────────
+    // Contains geometric shapes, box drawing, dingbats, misc symbols.
+    let symbol_paths: &[&str] = &[
+        "C:\\Windows\\Fonts\\seguisym.ttf",  // Segoe UI Symbol (Win 7+)
+        "C:\\Windows\\Fonts\\segmdl2.ttf",   // Segoe MDL2 Assets
+    ];
+
+    for path in symbol_paths {
+        if let Ok(font_data) = std::fs::read(path) {
+            tracing::info!("Loaded symbol font from: {path}");
+            fonts.font_data.insert(
+                "symbol_font".to_owned(),
+                std::sync::Arc::new(FontData::from_owned(font_data)),
+            );
+            for family_key in [FontFamily::Proportional, FontFamily::Monospace] {
+                if let Some(family) = fonts.families.get_mut(&family_key) {
+                    family.push("symbol_font".to_owned());
+                }
+            }
+            break;
+        }
+    }
+
+    // ── 2. Chinese font ──────────────────────────────────────────────
     // Priority: Microsoft YaHei > SimHei > NotoSansSC
-    let candidate_paths: &[&str] = &[
+    let cjk_paths: &[&str] = &[
         "C:\\Windows\\Fonts\\msyh.ttc",     // Microsoft YaHei (Win 7+)
         "C:\\Windows\\Fonts\\msyhbd.ttc",   // Microsoft YaHei Bold
         "C:\\Windows\\Fonts\\simhei.ttf",   // SimHei
@@ -82,28 +108,25 @@ fn configure_fonts(ctx: &egui::Context) {
         "/System/Library/Fonts/PingFang.ttc",                       // macOS
     ];
 
-    let mut loaded = false;
-    for path in candidate_paths {
+    let mut cjk_loaded = false;
+    for path in cjk_paths {
         if let Ok(font_data) = std::fs::read(path) {
             tracing::info!("Loaded Chinese font from: {path}");
             fonts.font_data.insert(
                 "chinese_font".to_owned(),
                 std::sync::Arc::new(FontData::from_owned(font_data)),
             );
-            // Insert at the beginning of the fallback list for Proportional
-            if let Some(family) = fonts.families.get_mut(&FontFamily::Proportional) {
-                family.insert(1, "chinese_font".to_owned());
+            for family_key in [FontFamily::Proportional, FontFamily::Monospace] {
+                if let Some(family) = fonts.families.get_mut(&family_key) {
+                    family.push("chinese_font".to_owned());
+                }
             }
-            // Also add to Monospace family as fallback
-            if let Some(family) = fonts.families.get_mut(&FontFamily::Monospace) {
-                family.insert(1, "chinese_font".to_owned());
-            }
-            loaded = true;
+            cjk_loaded = true;
             break;
         }
     }
 
-    if !loaded {
+    if !cjk_loaded {
         tracing::warn!("No Chinese font found on system — CJK characters may not render correctly");
     }
 

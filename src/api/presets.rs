@@ -1,4 +1,4 @@
-/// Preset CRUD routes.
+//! Preset CRUD routes.
 
 use axum::extract::{Path, Query};
 use axum::Json;

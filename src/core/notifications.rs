@@ -1,4 +1,4 @@
-/// In-memory notification queue for runtime warnings/errors.
+//! In-memory notification queue for runtime warnings/errors.
 
 use serde::Serialize;
 
@@ -18,6 +18,7 @@ impl NotificationQueue {
         Self { items: Vec::new() }
     }
 
+    #[allow(dead_code)]
     pub fn push(&mut self, level: &str, message: &str) {
         self.items.push(Notification {
             level: level.to_string(),

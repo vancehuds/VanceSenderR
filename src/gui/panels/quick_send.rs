@@ -1,5 +1,5 @@
-/// Quick Send panel — fast preset-based sending.
-/// Wired up with async bridge for actual sending.
+//! Quick Send panel — fast preset-based sending.
+//! Wired up with async bridge for actual sending.
 
 use eframe::egui;
 use crate::state::SharedState;
@@ -15,6 +15,7 @@ pub struct QuickSendState {
     pub presets: Vec<Preset>,
     pub selected_preset_idx: Option<usize>,
     pub loaded: bool,
+    #[allow(dead_code)]
     pub sending_line: Option<usize>, // which line is currently being sent
 }
 
@@ -144,7 +145,7 @@ pub fn render(
                 ui.add_space(8.0);
 
                 egui::ScrollArea::vertical().show(ui, |ui| {
-                    for (_i, line) in preset.texts.iter().enumerate() {
+                    for line in preset.texts.iter() {
                         egui::Frame::NONE
                             .fill(theme::BG_CARD)
                             .corner_radius(8.0)

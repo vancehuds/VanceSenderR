@@ -1,10 +1,9 @@
-/// YAML configuration manager for VanceSender.
-///
-/// - Thread-safe load/save with RwLock
-/// - File-mtime caching to avoid redundant disk IO
-/// - Atomic writes via temp-file + rename
-/// - Deep merge for partial updates
-
+//! YAML configuration manager for VanceSender.
+//!
+//! - Thread-safe load/save with RwLock
+//! - File-mtime caching to avoid redundant disk IO
+//! - Atomic writes via temp-file + rename
+//! - Deep merge for partial updates
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -132,6 +131,7 @@ pub fn get_i64(cfg: &YamlValue, section: &str, key: &str, default: i64) -> i64 {
         .unwrap_or(default)
 }
 
+#[allow(dead_code)]
 pub fn get_f64(cfg: &YamlValue, section: &str, key: &str, default: f64) -> f64 {
     cfg.get(section)
         .and_then(|s| s.get(key))
@@ -167,6 +167,7 @@ pub fn get_providers(cfg: &YamlValue) -> Vec<ProviderConfig> {
         .unwrap_or_default()
 }
 
+#[allow(dead_code)]
 pub fn get_provider_by_id(cfg: &YamlValue, id: &str) -> Option<ProviderConfig> {
     get_providers(cfg).into_iter().find(|p| p.id == id)
 }
@@ -365,3 +366,58 @@ ai:
     )
     .unwrap()
 }
+
+// ── Config Import ──────────────────────────────────────────────────────
+
+/// Result of importing an external config.
+pub struct ImportResult {
+    #[allow(dead_code)]
+    pub config_merged: bool,
+    pub presets_copied: usize,
+}
+
+/// Import configuration from an external `config.yaml` file (e.g. from original VanceSender).
+///
+/// 1. Reads and parses the external YAML.
+/// 2. Deep-merges it into the current config (external values override current).
+/// 3. Copies preset files from `<external_dir>/data/presets/` if they exist.
+pub fn import_config_from(path: &Path) -> AppResult<ImportResult> {
+    // 1. Read and parse external config
+    let raw = fs::read_to_string(path)
+        .map_err(|e| AppError::Internal(format!("读取配置文件失败: {e}")))?;
+    let external_cfg: YamlValue = serde_yaml::from_str(&raw)
+        .map_err(|e| AppError::Internal(format!("解析配置文件失败: {e}")))?;
+
+    // 2. Deep-merge into current config
+    let mut current = load_config();
+    deep_merge(&mut current, &external_cfg);
+    save_config(&current)?;
+
+    // 3. Copy presets if the external dir has data/presets/
+    let mut presets_copied = 0usize;
+    if let Some(external_dir) = path.parent() {
+        let external_presets = external_dir.join("data").join("presets");
+        if external_presets.is_dir() {
+            let target_presets = presets_dir();
+            let _ = fs::create_dir_all(&target_presets);
+
+            if let Ok(entries) = fs::read_dir(&external_presets) {
+                for entry in entries.flatten() {
+                    let src = entry.path();
+                    if src.is_file() {
+                        let dst = target_presets.join(entry.file_name());
+                        if fs::copy(&src, &dst).is_ok() {
+                            presets_copied += 1;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(ImportResult {
+        config_merged: true,
+        presets_copied,
+    })
+}
+

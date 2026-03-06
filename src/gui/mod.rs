@@ -1,4 +1,4 @@
-/// Native GUI entry point — egui application with async bridge.
+//! Native GUI entry point — egui application with async bridge.
 
 pub mod panels;
 pub mod sidebar;
@@ -18,20 +18,15 @@ use crate::desktop::tray::{TrayCommand, TrayManager};
 use crate::state::SharedState;
 
 /// Active panel in the sidebar navigation.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Panel {
+    #[default]
     Home,
     Send,
     QuickSend,
     AiGenerate,
     Presets,
     Settings,
-}
-
-impl Default for Panel {
-    fn default() -> Self {
-        Self::Home
-    }
 }
 
 // ── Async bridge ───────────────────────────────────────────────────────
@@ -48,13 +43,16 @@ pub enum AsyncResult {
     /// AI generation completed (non-stream)
     AiGenerateDone {
         texts: Vec<TextLine>,
+        #[allow(dead_code)]
         provider_id: String,
     },
     /// AI generation error
     AiGenerateError(String),
     /// AI stream chunk
+    #[allow(dead_code)]
     AiStreamChunk(String),
     /// AI stream completed
+    #[allow(dead_code)]
     AiStreamDone {
         texts: Vec<TextLine>,
         provider_id: String,
@@ -93,6 +91,7 @@ pub struct VanceSenderApp {
     pub overlay_rx: Option<std::sync::mpsc::Receiver<OverlayCommand>>,
     pub close_action: String,  // "ask", "minimize_to_tray", "exit"
     pub show_close_dialog: bool,
+    pub force_exit: bool,
 
     // Panel states
     pub home_state: panels::home::HomeState,
@@ -162,6 +161,7 @@ impl VanceSenderApp {
             overlay_rx,
             close_action,
             show_close_dialog: false,
+            force_exit: false,
             home_state: panels::home::HomeState::default(),
             send_state: panels::send::SendState::default(),
             quick_send_state: panels::quick_send::QuickSendState::default(),
@@ -243,6 +243,7 @@ impl VanceSenderApp {
                 TrayCommand::Exit => {
                     self.quick_overlay.stop();
                     self.tray.stop();
+                    self.force_exit = true;
                     ctx.send_viewport_cmd(egui::ViewportCommand::Close);
                 }
             }
@@ -261,7 +262,7 @@ impl VanceSenderApp {
                     }
                     OverlayCommand::StatusUpdate { text, done } => {
                         if done {
-                            self.toasts.success(format!("✅ {text}"));
+                            self.toasts.success(text.clone());
                         } else {
                             self.toasts.info(text);
                         }
@@ -274,6 +275,13 @@ impl VanceSenderApp {
 
     /// Handle close-to-tray when window is about to close.
     fn handle_close_request(&mut self, ctx: &egui::Context) {
+        // If force_exit is set, let the close proceed without interception.
+        if self.force_exit {
+            self.quick_overlay.stop();
+            self.tray.stop();
+            return;
+        }
+
         match self.close_action.as_str() {
             "minimize_to_tray" => {
                 ctx.send_viewport_cmd(egui::ViewportCommand::Visible(false));
@@ -322,6 +330,7 @@ impl eframe::App for VanceSenderApp {
                             self.show_close_dialog = false;
                             self.quick_overlay.stop();
                             self.tray.stop();
+                            self.force_exit = true;
                             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
                         }
                         if ui.button("取消").clicked() {

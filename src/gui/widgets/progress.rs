@@ -1,4 +1,4 @@
-/// Styled progress bar widget with status text.
+//! Styled progress bar widget with status text.
 
 use eframe::egui;
 use crate::gui::theme;
@@ -25,11 +25,11 @@ pub fn render_send_progress(
             ui.horizontal(|ui| {
                 // Status icon
                 let icon = match status {
-                    "sending" => "🔄",
-                    "complete" => "✅",
-                    "cancelled" => "⏹",
-                    "error" => "❌",
-                    _ => "📤",
+                    "sending" => "\u{21bb}",   // ↻
+                    "complete" => "\u{2714}",   // ✔
+                    "cancelled" => "\u{25a0}", // ■
+                    "error" => "\u{00d7}",     // ×
+                    _ => "\u{2191}",            // ↑
                 };
                 ui.label(egui::RichText::new(icon).size(16.0));
 

@@ -1,4 +1,4 @@
-/// Send history recording — persists last N sent texts.
+//! Send history recording — persists last N sent texts.
 
 use std::collections::VecDeque;
 use std::fs;
@@ -23,17 +23,9 @@ pub struct HistoryEntry {
     pub source: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 struct HistoryStore {
     entries: VecDeque<HistoryEntry>,
-}
-
-impl Default for HistoryStore {
-    fn default() -> Self {
-        Self {
-            entries: VecDeque::new(),
-        }
-    }
 }
 
 pub fn record_send(text: &str, success: bool, source: &str) {

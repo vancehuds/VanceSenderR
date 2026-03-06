@@ -1,4 +1,4 @@
-/// Settings & provider management routes.
+//! Settings & provider management routes.
 
 use axum::extract::{Path, Query, State};
 use axum::Json;
@@ -65,41 +65,42 @@ pub async fn get_settings(State(state): State<SharedState>) -> Json<JsonValue> {
 // ── Settings PATCH ─────────────────────────────────────────────────────
 
 #[derive(Deserialize)]
+#[allow(dead_code)]
 pub struct SenderSettingsPatch {
     #[serde(flatten)]
     pub values: JsonValue,
 }
 
 pub async fn update_sender_settings(Json(body): Json<JsonValue>) -> AppResult<Json<JsonValue>> {
-    let patch = serde_yaml::to_value(&json!({"sender": body}))
+    let patch = serde_yaml::to_value(json!({"sender": body}))
         .map_err(|e| AppError::Internal(e.to_string()))?;
     config::update_config(&patch)?;
     Ok(Json(json!({"success": true})))
 }
 
 pub async fn update_server_settings(Json(body): Json<JsonValue>) -> AppResult<Json<JsonValue>> {
-    let patch = serde_yaml::to_value(&json!({"server": body}))
+    let patch = serde_yaml::to_value(json!({"server": body}))
         .map_err(|e| AppError::Internal(e.to_string()))?;
     config::update_config(&patch)?;
     Ok(Json(json!({"success": true, "restart_required": true})))
 }
 
 pub async fn update_launch_settings(Json(body): Json<JsonValue>) -> AppResult<Json<JsonValue>> {
-    let patch = serde_yaml::to_value(&json!({"launch": body}))
+    let patch = serde_yaml::to_value(json!({"launch": body}))
         .map_err(|e| AppError::Internal(e.to_string()))?;
     config::update_config(&patch)?;
     Ok(Json(json!({"success": true})))
 }
 
 pub async fn update_ai_settings(Json(body): Json<JsonValue>) -> AppResult<Json<JsonValue>> {
-    let patch = serde_yaml::to_value(&json!({"ai": body}))
+    let patch = serde_yaml::to_value(json!({"ai": body}))
         .map_err(|e| AppError::Internal(e.to_string()))?;
     config::update_config(&patch)?;
     Ok(Json(json!({"success": true})))
 }
 
 pub async fn update_quick_overlay_settings(Json(body): Json<JsonValue>) -> AppResult<Json<JsonValue>> {
-    let patch = serde_yaml::to_value(&json!({"quick_overlay": body}))
+    let patch = serde_yaml::to_value(json!({"quick_overlay": body}))
         .map_err(|e| AppError::Internal(e.to_string()))?;
     config::update_config(&patch)?;
     Ok(Json(json!({"success": true})))
@@ -151,6 +152,7 @@ pub async fn get_desktop_window_state() -> Json<JsonValue> {
 
 #[derive(Deserialize)]
 pub struct WindowActionRequest {
+    #[allow(dead_code)]
     pub action: String,
 }
 

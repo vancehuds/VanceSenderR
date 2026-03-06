@@ -1,8 +1,8 @@
-/// Keyboard sender for FiveM — simulates T -> input -> Enter via Win32 SendInput.
-///
-/// Supports two input methods:
-/// - clipboard: Ctrl+V paste (fast, reliable)
-/// - typing: character-by-character Unicode input (slower, useful when clipboard is blocked)
+//! Keyboard sender for FiveM — simulates T -> input -> Enter via Win32 SendInput.
+//!
+//! Supports two input methods:
+//! - clipboard: Ctrl+V paste (fast, reliable)
+//! - typing: character-by-character Unicode input (slower, useful when clipboard is blocked)
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
@@ -226,7 +226,7 @@ fn type_text(text: &str, char_delay_ms: u64) {
 fn foreground_window_title() -> String {
     unsafe {
         let hwnd = GetForegroundWindow();
-        if hwnd.0 == std::ptr::null_mut() {
+        if hwnd.0.is_null() {
             return String::new();
         }
         let mut buf = [0u16; 256];
@@ -352,10 +352,10 @@ impl KeyboardSender {
     where
         F: FnMut(SendProgress),
     {
-        if !self.sending.compare_exchange(
+        if self.sending.compare_exchange(
             false, true,
             Ordering::SeqCst, Ordering::Relaxed
-        ).is_ok() {
+        ).is_err() {
             return Err("已有发送任务正在执行".into());
         }
         self.cancel.store(false, Ordering::SeqCst);

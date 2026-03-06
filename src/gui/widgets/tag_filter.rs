@@ -1,9 +1,10 @@
-/// Tag filter pill-style widget — multi-select filtering.
+//! Tag filter pill-style widget — multi-select filtering.
 
 use eframe::egui;
 use crate::gui::theme;
 
 /// Render a row of tag filter pills. Returns true if selection changed.
+#[allow(dead_code)]
 pub fn render_tag_filter(
     ui: &mut egui::Ui,
     tags: &[String],
@@ -38,6 +39,7 @@ pub fn render_tag_filter(
     changed
 }
 
+#[allow(dead_code)]
 fn pill_button(ui: &mut egui::Ui, label: &str, active: bool) -> egui::Response {
     let bg = if active {
         theme::ACCENT.linear_multiply(0.25)

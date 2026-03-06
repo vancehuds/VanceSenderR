@@ -1,6 +1,6 @@
-/// VanceSender — FiveM text sender with AI generation.
-///
-/// Entry point: CLI parsing, config loading, HTTP server + native GUI.
+//! VanceSender — FiveM text sender with AI generation.
+//!
+//! Entry point: CLI parsing, config loading, HTTP server + native GUI.
 
 mod api;
 mod app_meta;

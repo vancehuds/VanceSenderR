@@ -1,5 +1,5 @@
-/// AI Generate panel — scenario input, streaming generation, history.
-/// Wired up with async bridge for actual AI calls.
+//! AI Generate panel — scenario input, streaming generation, history.
+//! Wired up with async bridge for actual AI calls.
 
 use eframe::egui;
 use crate::state::SharedState;
@@ -17,6 +17,7 @@ pub struct AiState {
     pub generating: bool,
     pub generated_texts: Vec<TextLine>,
     pub stream_content: String,
+    #[allow(dead_code)]
     pub history_expanded: bool,
 }
 

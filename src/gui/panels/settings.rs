@@ -1,4 +1,4 @@
-/// Settings panel — sender, server, AI, overlay configuration.
+//! Settings panel — sender, server, AI, overlay configuration.
 
 use eframe::egui;
 use crate::state::SharedState;
@@ -81,6 +81,40 @@ pub fn render(
         tab_button(ui, "服务器", &mut ss.active_tab, SettingsTab::Server);
         tab_button(ui, "AI", &mut ss.active_tab, SettingsTab::AI);
         tab_button(ui, "悬浮窗", &mut ss.active_tab, SettingsTab::Overlay);
+
+        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+            if ui.add(
+                egui::Button::new(
+                    egui::RichText::new("\u{2B73} 导入旧版配置").size(12.0)
+                )
+                .fill(theme::BG_CARD)
+                .stroke(egui::Stroke::new(1.0, theme::ACCENT))
+            ).on_hover_text("从原版 VanceSender 导入 config.yaml 和预设文件")
+             .clicked()
+            {
+                if let Some(path) = rfd::FileDialog::new()
+                    .set_title("选择原版 VanceSender 的 config.yaml")
+                    .add_filter("YAML 配置", &["yaml", "yml"])
+                    .pick_file()
+                {
+                    match config::import_config_from(&path) {
+                        Ok(result) => {
+                            let msg = if result.presets_copied > 0 {
+                                format!("配置已导入，同时复制了 {} 个预设文件", result.presets_copied)
+                            } else {
+                                "配置已导入".to_string()
+                            };
+                            toasts.success(msg);
+                            // Reload settings UI
+                            ss.loaded = false;
+                        }
+                        Err(e) => {
+                            toasts.error(format!("导入失败: {e}"));
+                        }
+                    }
+                }
+            }
+        });
     });
 
     ui.add_space(12.0);
@@ -156,7 +190,7 @@ fn render_sender_settings(ui: &mut egui::Ui, ss: &mut SettingsState, toasts: &mu
             setting_row(ui, "逐字延迟(ms)", &mut ss.typing_char_delay, "18");
 
             ui.add_space(8.0);
-            if ui.add(egui::Button::new("💾 保存").fill(theme::ACCENT)).clicked() {
+            if ui.add(egui::Button::new("\u{2714} 保存").fill(theme::ACCENT)).clicked() {
                 if let Err(e) = save_sender_settings(ss) {
                     toasts.error(format!("保存失败: {e}"));
                 } else {
@@ -200,7 +234,7 @@ fn render_server_settings(ui: &mut egui::Ui, ss: &mut SettingsState, toasts: &mu
             }
 
             ui.add_space(8.0);
-            if ui.add(egui::Button::new("💾 保存").fill(theme::ACCENT)).clicked() {
+            if ui.add(egui::Button::new("\u{2714} 保存").fill(theme::ACCENT)).clicked() {
                 if let Err(e) = save_server_settings(ss) {
                     toasts.error(format!("保存失败: {e}"));
                 } else {
@@ -254,12 +288,13 @@ fn render_ai_settings(
                                 .color(theme::TEXT_MUTED),
                         );
                         ui.label(
-                            egui::RichText::new(if provider.api_key.is_empty() { "🔑❌" } else { "🔑✅" })
-                                .size(11.0),
+                            egui::RichText::new(if provider.api_key.is_empty() { "[\u{00D7}]" } else { "[\u{2714}]" })
+                                .size(11.0)
+                                .color(if provider.api_key.is_empty() { theme::DANGER } else { theme::SUCCESS }),
                         );
 
                         // Test button
-                        if ui.small_button("🧪 测试").clicked() {
+                        if ui.small_button("\u{25B6} 测试").clicked() {
                             let pid = provider.id.clone();
                             let tx = async_tx.clone();
                             let ctx = ui.ctx().clone();
@@ -283,7 +318,7 @@ fn render_ai_settings(
 
                         // Delete button
                         if ui.small_button(
-                            egui::RichText::new("🗑").color(theme::DANGER),
+                            egui::RichText::new("\u{2716}").color(theme::DANGER),
                         ).clicked() {
                             provider_to_delete = Some(provider.id.clone());
                         }
@@ -303,7 +338,7 @@ fn render_ai_settings(
 
             // Add provider toggle
             if !ss.show_add_provider {
-                if ui.button("➕ 添加服务商").clicked() {
+                if ui.button("+ 添加服务商").clicked() {
                     ss.show_add_provider = true;
                     ss.new_provider_name.clear();
                     ss.new_provider_api_base.clear();
@@ -330,7 +365,7 @@ fn render_ai_settings(
                         setting_row(ui, "模型", &mut ss.new_provider_model, "gpt-4o");
 
                         ui.horizontal(|ui| {
-                            if ui.add(egui::Button::new("✅ 确认").fill(theme::ACCENT)).clicked() {
+                            if ui.add(egui::Button::new("\u{2714} 确认").fill(theme::ACCENT)).clicked() {
                                 if ss.new_provider_name.trim().is_empty() {
                                     toasts.error("服务商名称不能为空");
                                 } else {
@@ -350,7 +385,7 @@ fn render_ai_settings(
                                     }
                                 }
                             }
-                            if ui.button("❌ 取消").clicked() {
+                            if ui.button("\u{00D7} 取消").clicked() {
                                 ss.show_add_provider = false;
                             }
                         });
@@ -367,7 +402,7 @@ fn render_ai_settings(
             );
 
             ui.add_space(8.0);
-            if ui.add(egui::Button::new("💾 保存").fill(theme::ACCENT)).clicked() {
+            if ui.add(egui::Button::new("\u{2714} 保存").fill(theme::ACCENT)).clicked() {
                 if let Err(e) = save_ai_settings(ss) {
                     toasts.error(format!("保存失败: {e}"));
                 } else {
@@ -411,7 +446,7 @@ fn render_overlay_settings(ui: &mut egui::Ui, ss: &mut SettingsState, toasts: &m
             });
 
             ui.add_space(8.0);
-            if ui.add(egui::Button::new("💾 保存").fill(theme::ACCENT)).clicked() {
+            if ui.add(egui::Button::new("\u{2714} 保存").fill(theme::ACCENT)).clicked() {
                 if let Err(e) = save_overlay_settings(ss) {
                     toasts.error(format!("保存失败: {e}"));
                 } else {
@@ -457,7 +492,7 @@ fn load_settings(ss: &mut SettingsState) {
 }
 
 fn save_sender_settings(ss: &SettingsState) -> Result<(), String> {
-    let patch = serde_yaml::to_value(&serde_json::json!({
+    let patch = serde_yaml::to_value(serde_json::json!({
         "sender": {
             "method": ss.method,
             "chat_open_key": ss.chat_open_key,
@@ -476,7 +511,7 @@ fn save_sender_settings(ss: &SettingsState) -> Result<(), String> {
 }
 
 fn save_server_settings(ss: &SettingsState) -> Result<(), String> {
-    let patch = serde_yaml::to_value(&serde_json::json!({
+    let patch = serde_yaml::to_value(serde_json::json!({
         "server": {
             "host": ss.host,
             "port": ss.port.parse::<i64>().unwrap_or(8730),
@@ -489,7 +524,7 @@ fn save_server_settings(ss: &SettingsState) -> Result<(), String> {
 }
 
 fn save_ai_settings(ss: &SettingsState) -> Result<(), String> {
-    let patch = serde_yaml::to_value(&serde_json::json!({
+    let patch = serde_yaml::to_value(serde_json::json!({
         "ai": {
             "default_provider": ss.default_provider,
             "system_prompt": ss.system_prompt,
@@ -500,7 +535,7 @@ fn save_ai_settings(ss: &SettingsState) -> Result<(), String> {
 }
 
 fn save_overlay_settings(ss: &SettingsState) -> Result<(), String> {
-    let patch = serde_yaml::to_value(&serde_json::json!({
+    let patch = serde_yaml::to_value(serde_json::json!({
         "quick_overlay": {
             "enabled": ss.overlay_enabled,
             "trigger_hotkey": ss.trigger_hotkey,

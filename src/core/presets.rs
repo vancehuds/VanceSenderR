@@ -1,4 +1,4 @@
-/// Preset CRUD — individual JSON files under `data/presets/`.
+//! Preset CRUD — individual JSON files under `data/presets/`.
 
 use std::fs;
 use std::path::PathBuf;

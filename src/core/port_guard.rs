@@ -1,7 +1,7 @@
-/// Startup port occupancy guard utilities.
-///
-/// Checks if the configured port is available before starting the HTTP server.
-/// If occupied, identifies the occupying process and optionally force-kills it.
+//! Startup port occupancy guard utilities.
+//!
+//! Checks if the configured port is available before starting the HTTP server.
+//! If occupied, identifies the occupying process and optionally force-kills it.
 
 use std::net::TcpListener;
 use std::process::Command;
@@ -203,17 +203,17 @@ pub fn ensure_startup_port_available(host: &str, port: u16) -> AppResult<()> {
                 }
                 if wait_for_port_release(host, port, 8.0) {
                     tracing::info!("进程已终止，端口 {port} 已释放");
-                    return Ok(());
+                    Ok(())
                 } else {
-                    return Err(AppError::Internal(format!(
+                    Err(AppError::Internal(format!(
                         "已终止进程但端口 {port} 仍未释放"
-                    )));
+                    )))
                 }
             } else {
                 tracing::info!("用户取消终止进程");
-                return Err(AppError::Internal(format!(
+                Err(AppError::Internal(format!(
                     "端口 {port} 被占用，用户取消终止"
-                )));
+                )))
             }
         }
 

@@ -1,4 +1,4 @@
-/// Network utilities — LAN IPv4 discovery.
+//! Network utilities — LAN IPv4 discovery.
 
 pub fn get_lan_ipv4_addresses() -> Vec<String> {
     // Use platform-specific network interface enumeration

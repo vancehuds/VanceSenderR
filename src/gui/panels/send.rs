@@ -1,5 +1,5 @@
-/// Send panel — text list with type selector, batch controls, progress bar.
-/// Wired up with async bridge for actual sending.
+//! Send panel — text list with type selector, batch controls, progress bar.
+//! Wired up with async bridge for actual sending.
 
 use eframe::egui;
 use crate::state::SharedState;
@@ -59,7 +59,7 @@ pub fn render(
     // Header
     ui.horizontal(|ui| {
         ui.label(
-            egui::RichText::new("📤 文本发送")
+            egui::RichText::new("↑ 文本发送")
                 .size(18.0)
                 .color(theme::TEXT_PRIMARY)
                 .strong(),
@@ -68,7 +68,7 @@ pub fn render(
             let btn = ui.add_enabled(
                 !send.sending && !send.texts.is_empty(),
                 egui::Button::new(
-                    egui::RichText::new("🚀 批量发送").color(egui::Color32::WHITE),
+                    egui::RichText::new("▶ 批量发送").color(egui::Color32::WHITE),
                 )
                 .fill(theme::ACCENT),
             );
@@ -121,18 +121,14 @@ pub fn render(
                 });
             }
 
-            if send.sending {
-                if ui.button("⏹ 停止").clicked() {
-                    state.sender.read().cancel();
-                    send.sending = false;
-                }
+            if send.sending && ui.button("■ 停止").clicked() {
+                state.sender.read().cancel();
+                send.sending = false;
             }
 
             // Clear all button
-            if !send.texts.is_empty() && !send.sending {
-                if ui.button("🗑 清空").clicked() {
-                    send.texts.clear();
-                }
+            if !send.texts.is_empty() && !send.sending && ui.button("✖ 清空").clicked() {
+                send.texts.clear();
             }
         });
     });
@@ -173,7 +169,7 @@ pub fn render(
                         .desired_width(ui.available_width() - 80.0),
                 );
 
-                let add_btn = ui.button("➕ 添加");
+                let add_btn = ui.button("+ 添加");
 
                 if add_btn.clicked()
                     || (te.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)))
@@ -227,7 +223,7 @@ pub fn render(
                 ui.add_space(40.0);
                 ui.vertical_centered(|ui| {
                     ui.label(
-                        egui::RichText::new("📝 暂无文本")
+                        egui::RichText::new("暂无文本")
                             .size(16.0)
                             .color(theme::TEXT_MUTED),
                     );

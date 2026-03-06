@@ -1,5 +1,4 @@
-/// Send routes — single + batch (SSE) + status + history.
-
+//! Send routes — single + batch (SSE) + status + history.
 
 use std::convert::Infallible;
 

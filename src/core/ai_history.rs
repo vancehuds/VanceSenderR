@@ -1,4 +1,4 @@
-/// AI generation history — persists generated text sets with starring.
+//! AI generation history — persists generated text sets with starring.
 
 use std::collections::VecDeque;
 use std::fs;

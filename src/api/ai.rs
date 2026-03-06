@@ -1,4 +1,4 @@
-/// AI routes — generate, stream, rewrite, test, history.
+//! AI routes — generate, stream, rewrite, test, history.
 
 use std::convert::Infallible;
 

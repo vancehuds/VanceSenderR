@@ -1,4 +1,4 @@
-/// Shared application state accessible by both native GUI and HTTP API.
+//! Shared application state accessible by both native GUI and HTTP API.
 
 use std::sync::Arc;
 

@@ -6,6 +6,7 @@ use serde_json::json;
 #[derive(Debug, thiserror::Error)]
 pub enum AppError {
     #[error("未授权: {0}")]
+    #[allow(dead_code)]
     Unauthorized(String),
 
     #[error("请求无效: {0}")]
@@ -15,6 +16,7 @@ pub enum AppError {
     NotFound(String),
 
     #[error("冲突: {0}")]
+    #[allow(dead_code)]
     Conflict(String),
 
     #[error("内部错误: {0}")]

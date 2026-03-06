@@ -1,4 +1,4 @@
-/// Stats routes.
+//! Stats routes.
 
 use axum::extract::State;
 use axum::Json;

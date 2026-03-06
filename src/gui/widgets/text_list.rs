@@ -1,4 +1,4 @@
-/// Reusable text list widget with type badges, inline editing, and delete.
+//! Reusable text list widget with type badges, inline editing, and delete.
 
 use eframe::egui;
 use crate::gui::theme;
@@ -68,25 +68,23 @@ pub fn render_text_list(
                             }
 
                             // Move down
-                            if i < items.len() - 1 {
-                                if ui
+                            if i < items.len() - 1
+                                && ui
                                     .small_button(egui::RichText::new("▼").size(10.0).color(theme::TEXT_MUTED))
                                     .on_hover_text("下移")
                                     .clicked()
-                                {
-                                    to_move_down = Some(i);
-                                }
+                            {
+                                to_move_down = Some(i);
                             }
 
                             // Move up
-                            if i > 0 {
-                                if ui
+                            if i > 0
+                                && ui
                                     .small_button(egui::RichText::new("▲").size(10.0).color(theme::TEXT_MUTED))
                                     .on_hover_text("上移")
                                     .clicked()
-                                {
-                                    to_move_up = Some(i);
-                                }
+                            {
+                                to_move_up = Some(i);
                             }
                         },
                     );

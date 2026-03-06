@@ -1,4 +1,4 @@
-/// Custom frameless titlebar with window controls.
+//! Custom frameless titlebar with window controls.
 
 use eframe::egui::{self, Sense, Vec2};
 

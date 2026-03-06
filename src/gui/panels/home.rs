@@ -1,5 +1,5 @@
-/// Home panel — welcome banner, stats, update check, public config.
-/// Update check is triggered via async bridge.
+//! Home panel — welcome banner, stats, update check, public config.
+//! Update check is triggered via async bridge.
 
 use eframe::egui;
 use crate::state::SharedState;
@@ -59,10 +59,10 @@ pub fn render(ui: &mut egui::Ui, state: &SharedState, home: &mut HomeState) {
         // Stats card
         let stats = state.stats.read().get_stats();
         ui.columns(4, |cols| {
-            stat_card(&mut cols[0], "总发送", &stats.total_sent.to_string(), "📤");
-            stat_card(&mut cols[1], "成功", &stats.total_success.to_string(), "✅");
-            stat_card(&mut cols[2], "失败", &stats.total_failed.to_string(), "❌");
-            stat_card(&mut cols[3], "成功率", &format!("{}%", stats.success_rate), "📊");
+            stat_card(&mut cols[0], "总发送", &stats.total_sent.to_string(), "↑");
+            stat_card(&mut cols[1], "成功", &stats.total_success.to_string(), "✔");
+            stat_card(&mut cols[2], "失败", &stats.total_failed.to_string(), "×");
+            stat_card(&mut cols[3], "成功率", &format!("{}%", stats.success_rate), "%");
         });
 
         ui.add_space(12.0);
@@ -81,7 +81,7 @@ pub fn render(ui: &mut egui::Ui, state: &SharedState, home: &mut HomeState) {
                         .stroke(egui::Stroke::new(1.0, theme::SUCCESS.linear_multiply(0.3)))
                         .show(ui, |ui| {
                             ui.label(
-                                egui::RichText::new("📱 局域网访问")
+                                egui::RichText::new("⇄ 局域网访问")
                                     .size(14.0)
                                     .color(theme::SUCCESS)
                                     .strong(),
@@ -109,7 +109,7 @@ pub fn render(ui: &mut egui::Ui, state: &SharedState, home: &mut HomeState) {
             .show(ui, |ui| {
                 ui.horizontal(|ui| {
                     ui.label(
-                        egui::RichText::new("🔄 更新检查")
+                        egui::RichText::new("↻ 更新检查")
                             .size(15.0)
                             .color(theme::TEXT_PRIMARY),
                     );
@@ -133,7 +133,7 @@ pub fn render(ui: &mut egui::Ui, state: &SharedState, home: &mut HomeState) {
                                     .size(13.0),
                             );
                             if let Some(ref url) = result.release_url {
-                                if ui.small_button("📥 查看").clicked() {
+                                if ui.small_button("⇩ 查看").clicked() {
                                     let _ = open::that(url);
                                 }
                             }
@@ -160,7 +160,7 @@ pub fn render(ui: &mut egui::Ui, state: &SharedState, home: &mut HomeState) {
                     .show(ui, |ui| {
                         if let Some(ref title) = pc.title {
                             ui.label(
-                                egui::RichText::new(format!("📢 {title}"))
+                                egui::RichText::new(format!("◈ {title}"))
                                     .size(15.0)
                                     .color(theme::ACCENT)
                                     .strong(),

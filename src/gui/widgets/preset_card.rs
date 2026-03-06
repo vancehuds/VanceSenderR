@@ -1,9 +1,10 @@
-/// Preset card widget — shows name, text count, tags, action buttons.
+//! Preset card widget — shows name, text count, tags, action buttons.
 
 use eframe::egui;
 use crate::gui::theme;
 
 /// Actions the caller should handle after rendering a preset card.
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub enum PresetCardAction {
     None,
@@ -14,6 +15,7 @@ pub enum PresetCardAction {
 }
 
 /// Render a single preset card. Returns the action the user triggered.
+#[allow(dead_code)]
 pub fn render_preset_card(
     ui: &mut egui::Ui,
     id: &str,

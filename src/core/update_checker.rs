@@ -1,5 +1,4 @@
-/// GitHub update checker with caching and conditional requests.
-
+//! GitHub update checker with caching and conditional requests.
 
 use std::sync::Mutex;
 use std::time::{Duration, Instant};

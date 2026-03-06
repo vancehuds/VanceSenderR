@@ -1,4 +1,4 @@
-/// Send statistics tracking — in-memory with periodic JSON flush.
+//! Send statistics tracking — in-memory with periodic JSON flush.
 
 use std::collections::HashMap;
 use std::fs;
@@ -14,7 +14,7 @@ fn stats_file() -> PathBuf {
     data_dir().join("stats.json")
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Stats {
     pub total_sent: u64,
     pub total_success: u64,
@@ -24,19 +24,6 @@ pub struct Stats {
     pub preset_usage: HashMap<String, u64>,
     #[serde(default)]
     pub daily_counts: HashMap<String, u64>,
-}
-
-impl Default for Stats {
-    fn default() -> Self {
-        Self {
-            total_sent: 0,
-            total_success: 0,
-            total_failed: 0,
-            total_batches: 0,
-            preset_usage: HashMap::new(),
-            daily_counts: HashMap::new(),
-        }
-    }
 }
 
 #[derive(Debug, Clone, Serialize)]
