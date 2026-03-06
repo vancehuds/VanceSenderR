@@ -79,7 +79,32 @@ pub fn build_router(state: SharedState) -> Router {
         .with_state(state)
 }
 
-/// Auth middleware — checks Bearer token.
+/// Constant-time byte comparison to prevent timing attacks.
+fn ct_eq(a: &[u8], b: &[u8]) -> bool {
+    if a.len() != b.len() {
+        return false;
+    }
+    let mut acc: u8 = 0;
+    for (x, y) in a.iter().zip(b.iter()) {
+        acc |= x ^ y;
+    }
+    acc == 0
+}
+
+/// Build a 401 Unauthorized response with proper headers and JSON body.
+fn unauthorized_response() -> Response {
+    (
+        StatusCode::UNAUTHORIZED,
+        [
+            (axum::http::header::WWW_AUTHENTICATE, "Bearer"),
+            (axum::http::header::CONTENT_TYPE, "application/json"),
+        ],
+        r#"{"detail":"未授权访问，请提供有效的 Token"}"#,
+    )
+        .into_response()
+}
+
+/// Auth middleware — checks Bearer token with constant-time comparison.
 async fn auth_middleware(
     axum::extract::State(_state): axum::extract::State<SharedState>,
     request: Request,
@@ -122,9 +147,9 @@ async fn auth_middleware(
         &query_token
     };
 
-    if provided_token == token {
+    if ct_eq(provided_token.as_bytes(), token.as_bytes()) {
         next.run(request).await
     } else {
-        (StatusCode::UNAUTHORIZED, "未授权").into_response()
+        unauthorized_response()
     }
 }

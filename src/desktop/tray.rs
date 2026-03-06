@@ -113,59 +113,36 @@ impl Drop for TrayManager {
     }
 }
 
-/// Create a simple 32×32 RGBA tray icon with a "V" glyph.
+/// Gets the path to icon.ico next to the executable.
+fn icon_path() -> std::path::PathBuf {
+    let mut path = std::env::current_exe().unwrap_or_default();
+    path.pop(); // remove exe filename
+    path.push("icon.ico");
+    path
+}
+
+/// Load the tray icon from icon.ico, falling back to a simple coloured square.
 fn create_tray_icon() -> Option<Icon> {
+    // Try loading from icon.ico next to the executable
+    if let Ok(data) = std::fs::read(icon_path()) {
+        if let Ok(img) = image::load_from_memory_with_format(&data, image::ImageFormat::Ico) {
+            let rgba_img = img.resize(32, 32, image::imageops::FilterType::Lanczos3).into_rgba8();
+            let (w, h) = rgba_img.dimensions();
+            return Icon::from_rgba(rgba_img.into_raw(), w, h).ok();
+        }
+    }
+
+    // Fallback: simple 32×32 coloured square
     let size = 32u32;
     let mut rgba = vec![0u8; (size * size * 4) as usize];
-
-    // Fill with dark background and a colored border
     for y in 0..size {
         for x in 0..size {
             let idx = ((y * size + x) * 4) as usize;
-            let is_border = x < 2 || x >= size - 2 || y < 2 || y >= size - 2;
-            let is_inner = x >= 4 && x < size - 4 && y >= 4 && y < size - 4;
-
-            if is_border {
-                // Accent color border (purple-ish)
-                rgba[idx] = 108;     // R
-                rgba[idx + 1] = 92;  // G
-                rgba[idx + 2] = 231; // B
-                rgba[idx + 3] = 255; // A
-            } else if is_inner {
-                // Dark fill
-                rgba[idx] = 18;
-                rgba[idx + 1] = 24;
-                rgba[idx + 2] = 37;
-                rgba[idx + 3] = 255;
-            } else {
-                // Rounded corner transparent
-                rgba[idx + 3] = 0;
-            }
-        }
-    }
-
-    // Draw a simple "V" shape in the center
-    let _center_x = size / 2;
-    let draw_pixel = |rgba: &mut [u8], x: u32, y: u32| {
-        if x < size && y < size {
-            let idx = ((y * size + x) * 4) as usize;
-            rgba[idx] = 87;
-            rgba[idx + 1] = 224;
-            rgba[idx + 2] = 255;
+            rgba[idx] = 108;
+            rgba[idx + 1] = 92;
+            rgba[idx + 2] = 231;
             rgba[idx + 3] = 255;
         }
-    };
-
-    // V shape: two diagonal lines meeting at bottom center
-    for i in 0..10u32 {
-        let lx = 8 + i;
-        let rx = size - 9 - i;
-        let y = 8 + i;
-        for dx in 0..2 {
-            draw_pixel(&mut rgba, lx + dx, y);
-            draw_pixel(&mut rgba, rx + dx, y);
-        }
     }
-
     Icon::from_rgba(rgba, size, size).ok()
 }

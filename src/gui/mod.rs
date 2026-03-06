@@ -6,13 +6,15 @@ pub mod theme;
 pub mod titlebar;
 pub mod widgets;
 
-
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
 
 use eframe::egui;
 
-
 use crate::config;
-use crate::core::presets::TextLine;
+use crate::core::presets::{self, Preset, TextLine};
+use crate::core::sender::SenderConfig;
+use crate::core::history;
 use crate::desktop::quick_overlay::{QuickOverlay, OverlayCommand};
 use crate::desktop::tray::{TrayCommand, TrayManager};
 use crate::state::SharedState;
@@ -74,6 +76,27 @@ pub enum AsyncResult {
 pub type AsyncTx = std::sync::mpsc::Sender<AsyncResult>;
 pub type AsyncRx = std::sync::mpsc::Receiver<AsyncResult>;
 
+// ── Quick overlay shared state ─────────────────────────────────────────
+// Shared between the main viewport and the overlay deferred viewport.
+
+pub struct QuickOverlayState {
+    pub presets: Vec<Preset>,
+    pub selected_preset_idx: Option<usize>,
+    pub loaded: bool,
+    pub status_message: Option<String>,
+}
+
+impl Default for QuickOverlayState {
+    fn default() -> Self {
+        Self {
+            presets: Vec::new(),
+            selected_preset_idx: None,
+            loaded: false,
+            status_message: None,
+        }
+    }
+}
+
 /// Main application state for the egui GUI.
 pub struct VanceSenderApp {
     pub state: SharedState,
@@ -92,6 +115,10 @@ pub struct VanceSenderApp {
     pub close_action: String,  // "ask", "minimize_to_tray", "exit"
     pub show_close_dialog: bool,
     pub force_exit: bool,
+
+    // Quick overlay window (separate viewport)
+    pub show_quick_overlay: Arc<AtomicBool>,
+    pub overlay_window_state: Arc<Mutex<QuickOverlayState>>,
 
     // Panel states
     pub home_state: panels::home::HomeState,
@@ -137,6 +164,7 @@ impl VanceSenderApp {
         // Start quick overlay if enabled
         let cfg = config::load_config();
         let mut quick_overlay = QuickOverlay::new();
+        quick_overlay.set_ctx(cc.egui_ctx.clone());
         let overlay_enabled = config::get_bool(&cfg, "quick_overlay", "enabled");
         if overlay_enabled {
             let hotkey = config::get_str(&cfg, "quick_overlay", "trigger_hotkey").to_string();
@@ -162,6 +190,8 @@ impl VanceSenderApp {
             close_action,
             show_close_dialog: false,
             force_exit: false,
+            show_quick_overlay: Arc::new(AtomicBool::new(false)),
+            overlay_window_state: Arc::new(Mutex::new(QuickOverlayState::default())),
             home_state: panels::home::HomeState::default(),
             send_state: panels::send::SendState::default(),
             quick_send_state: panels::quick_send::QuickSendState::default(),
@@ -256,9 +286,10 @@ impl VanceSenderApp {
             while let Ok(cmd) = rx.try_recv() {
                 match cmd {
                     OverlayCommand::HotkeyTriggered => {
-                        self.current_panel = Panel::QuickSend;
-                        ctx.send_viewport_cmd(egui::ViewportCommand::Visible(true));
-                        ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
+                        // Toggle the overlay window
+                        let was_showing = self.show_quick_overlay.load(Ordering::Relaxed);
+                        self.show_quick_overlay.store(!was_showing, Ordering::SeqCst);
+                        ctx.request_repaint();
                     }
                     OverlayCommand::StatusUpdate { text, done } => {
                         if done {
@@ -271,6 +302,31 @@ impl VanceSenderApp {
                 }
             }
         }
+    }
+
+    /// Show the quick send overlay as a separate native window.
+    fn show_overlay_viewport(&self, ctx: &egui::Context) {
+        if !self.show_quick_overlay.load(Ordering::Relaxed) {
+            return;
+        }
+
+        let show_flag = self.show_quick_overlay.clone();
+        let overlay_state = self.overlay_window_state.clone();
+        let app_state = self.state.clone();
+        let async_tx = self.async_tx.clone();
+
+        let viewport_id = egui::ViewportId::from_hash_of("quick_overlay_window");
+        ctx.show_viewport_deferred(
+            viewport_id,
+            egui::ViewportBuilder::default()
+                .with_title("VanceSender 快速发送")
+                .with_inner_size([500.0, 450.0])
+                .with_min_inner_size([400.0, 350.0])
+                .with_always_on_top(),
+            move |ctx, _class| {
+                render_overlay_window(ctx, &show_flag, &overlay_state, &app_state, &async_tx);
+            },
+        );
     }
 
     /// Handle close-to-tray when window is about to close.
@@ -311,6 +367,9 @@ impl eframe::App for VanceSenderApp {
 
         // Overlay events
         self.handle_overlay_events(ctx);
+
+        // Quick overlay viewport (separate window)
+        self.show_overlay_viewport(ctx);
 
         // Close dialog
         if self.show_close_dialog {
@@ -401,15 +460,287 @@ impl eframe::App for VanceSenderApp {
     }
 }
 
+// ── Overlay window rendering ───────────────────────────────────────────
+
+fn render_overlay_window(
+    ctx: &egui::Context,
+    show_flag: &Arc<AtomicBool>,
+    overlay_state: &Arc<Mutex<QuickOverlayState>>,
+    app_state: &SharedState,
+    async_tx: &AsyncTx,
+) {
+    // Apply theme to this viewport too
+    theme::apply_theme(ctx);
+
+    // Handle close / Escape
+    if ctx.input(|i| i.viewport().close_requested()) || ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
+        show_flag.store(false, Ordering::SeqCst);
+        ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
+        return;
+    }
+
+    egui::CentralPanel::default().show(ctx, |ui| {
+        let mut state = overlay_state.lock().unwrap();
+
+        // Lazy-load presets
+        if !state.loaded {
+            state.presets = presets::list_all_presets(None).unwrap_or_default();
+            state.loaded = true;
+        }
+
+        ui.add_space(8.0);
+
+        // Header
+        ui.horizontal(|ui| {
+            ui.label(
+                egui::RichText::new("⚡ 快速发送")
+                    .size(18.0)
+                    .color(theme::TEXT_PRIMARY)
+                    .strong(),
+            );
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                ui.label(
+                    egui::RichText::new("F7 / Esc 关闭")
+                        .size(11.0)
+                        .color(theme::TEXT_MUTED),
+                );
+            });
+        });
+
+        ui.add_space(6.0);
+        ui.separator();
+        ui.add_space(6.0);
+
+        // Preset selector card
+        egui::Frame::NONE
+            .fill(theme::BG_CARD)
+            .corner_radius(8.0)
+            .inner_margin(10.0)
+            .stroke(egui::Stroke::new(1.0, theme::BORDER))
+            .show(ui, |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(egui::RichText::new("预设:").color(theme::TEXT_SECONDARY));
+
+                    let preset_names: Vec<String> = state.presets.iter().map(|p| p.name.clone()).collect();
+                    let current_sel = state.selected_preset_idx;
+                    let selected_name = current_sel
+                        .and_then(|i| preset_names.get(i))
+                        .cloned()
+                        .unwrap_or_else(|| "选择预设...".into());
+
+                    egui::ComboBox::from_id_salt("overlay_preset")
+                        .selected_text(&selected_name)
+                        .width(ui.available_width() - 60.0)
+                        .show_ui(ui, |ui| {
+                            for (i, name) in preset_names.iter().enumerate() {
+                                let is_selected = current_sel == Some(i);
+                                if ui.selectable_label(is_selected, name).clicked() {
+                                    state.selected_preset_idx = Some(i);
+                                }
+                            }
+                        });
+
+                    if ui.button("🔄").on_hover_text("刷新预设").clicked() {
+                        state.presets = presets::list_all_presets(None).unwrap_or_default();
+                        state.selected_preset_idx = None;
+                    }
+                });
+            });
+
+        ui.add_space(8.0);
+
+        // Status message
+        if let Some(ref msg) = state.status_message.clone() {
+            ui.horizontal(|ui| {
+                ui.label(
+                    egui::RichText::new(msg)
+                        .size(12.0)
+                        .color(theme::SUCCESS),
+                );
+            });
+            ui.add_space(4.0);
+        }
+
+        // Text lines from selected preset
+        if let Some(idx) = state.selected_preset_idx {
+            if let Some(preset) = state.presets.get(idx).cloned() {
+                if preset.texts.is_empty() {
+                    ui.vertical_centered(|ui| {
+                        ui.label(
+                            egui::RichText::new("此预设没有文本行")
+                                .color(theme::TEXT_MUTED),
+                        );
+                    });
+                } else {
+                    // Action buttons
+                    ui.horizontal(|ui| {
+                        if ui
+                            .add(
+                                egui::Button::new(
+                                    egui::RichText::new("🚀 发送全部").color(egui::Color32::WHITE),
+                                )
+                                .fill(theme::ACCENT),
+                            )
+                            .clicked()
+                        {
+                            let texts: Vec<String> = preset
+                                .texts
+                                .iter()
+                                .map(|l| format!("/{} {}", l.r#type, l.content))
+                                .collect();
+
+                            let tx = async_tx.clone();
+                            let st = app_state.clone();
+                            let ctx_clone = ctx.clone();
+                            let overlay_st = overlay_state.clone();
+
+                            std::thread::spawn(move || {
+                                let cfg = config::load_config();
+                                let sender_cfg = SenderConfig::from_yaml(&cfg);
+                                let sender = st.sender.read();
+                                st.stats.write().record_batch();
+
+                                let _ = sender.send_batch_sync(&texts, &sender_cfg, None, |progress| {
+                                    if progress.status == "sent" {
+                                        if let Some(ref text) = progress.text {
+                                            history::record_send(text, true, "gui-overlay");
+                                            st.stats.write().record_send(true, None);
+                                        }
+                                    }
+                                    if let Ok(mut s) = overlay_st.lock() {
+                                        s.status_message = Some(format!(
+                                            "发送中 {}/{}",
+                                            progress.index + 1,
+                                            progress.total,
+                                        ));
+                                    }
+                                    let _ = tx.send(AsyncResult::BatchSendProgress(progress));
+                                    ctx_clone.request_repaint();
+                                });
+
+                                if let Ok(mut s) = overlay_st.lock() {
+                                    s.status_message = Some("✅ 发送完成".into());
+                                }
+                                let _ = tx.send(AsyncResult::BatchSendDone);
+                                ctx_clone.request_repaint();
+                            });
+                        }
+
+                        ui.label(
+                            egui::RichText::new(format!("共{}条", preset.texts.len()))
+                                .size(12.0)
+                                .color(theme::TEXT_MUTED),
+                        );
+                    });
+
+                    ui.add_space(6.0);
+
+                    // Scrollable text lines
+                    egui::ScrollArea::vertical().auto_shrink(false).show(ui, |ui| {
+                        for line in preset.texts.iter() {
+                            egui::Frame::NONE
+                                .fill(theme::BG_CARD)
+                                .corner_radius(6.0)
+                                .inner_margin(8.0)
+                                .stroke(egui::Stroke::new(1.0, theme::BORDER))
+                                .show(ui, |ui| {
+                                    // Type tag + text content (wrapping)
+                                    ui.horizontal_wrapped(|ui| {
+                                        let type_color = match line.r#type.as_str() {
+                                            "me" => theme::ACCENT,
+                                            "do" => theme::SUCCESS,
+                                            "b" => theme::WARNING,
+                                            _ => theme::TEXT_MUTED,
+                                        };
+                                        ui.label(
+                                            egui::RichText::new(format!("/{}", line.r#type))
+                                                .color(type_color)
+                                                .size(11.0)
+                                                .strong(),
+                                        );
+                                        ui.label(
+                                            egui::RichText::new(&line.content)
+                                                .color(theme::TEXT_PRIMARY)
+                                                .size(12.0),
+                                        );
+                                    });
+
+                                    // Send button on its own row, right-aligned
+                                    ui.with_layout(
+                                        egui::Layout::right_to_left(egui::Align::Center),
+                                        |ui| {
+                                            if ui.small_button("📤").on_hover_text("发送").clicked() {
+                                                let text = format!("/{} {}", line.r#type, line.content);
+                                                let tx = async_tx.clone();
+                                                let st = app_state.clone();
+                                                let ctx_clone = ctx.clone();
+
+                                                std::thread::spawn(move || {
+                                                    let cfg = config::load_config();
+                                                    let sender_cfg = SenderConfig::from_yaml(&cfg);
+                                                    let sender = st.sender.read();
+                                                    let success = sender.send_single(&text, &sender_cfg).is_ok();
+                                                    history::record_send(&text, success, "gui-overlay");
+                                                    st.stats.write().record_send(success, None);
+                                                    let _ = tx.send(AsyncResult::SendSingleDone {
+                                                        text,
+                                                        success,
+                                                    });
+                                                    ctx_clone.request_repaint();
+                                                });
+                                            }
+                                        },
+                                    );
+                                });
+                            ui.add_space(3.0);
+                        }
+                    });
+                }
+            }
+        } else {
+            ui.add_space(30.0);
+            ui.vertical_centered(|ui| {
+                ui.label(
+                    egui::RichText::new("⚡ 选择一个预设开始快捷发送")
+                        .size(14.0)
+                        .color(theme::TEXT_MUTED),
+                );
+            });
+        }
+    });
+}
+
+/// Load icon.ico from next to the executable as an egui IconData.
+fn load_window_icon() -> Option<egui::IconData> {
+    let mut path = std::env::current_exe().ok()?;
+    path.pop();
+    path.push("icon.ico");
+    let data = std::fs::read(&path).ok()?;
+    let img = image::load_from_memory_with_format(&data, image::ImageFormat::Ico).ok()?;
+    let rgba = img.into_rgba8();
+    let (w, h) = rgba.dimensions();
+    Some(egui::IconData {
+        rgba: rgba.into_raw(),
+        width: w,
+        height: h,
+    })
+}
+
 /// Launch the native GUI window.
 pub fn run_gui(state: SharedState, tokio_handle: tokio::runtime::Handle) -> eframe::Result<()> {
+    let mut viewport = egui::ViewportBuilder::default()
+        .with_title("VanceSender")
+        .with_inner_size([1100.0, 750.0])
+        .with_min_inner_size([800.0, 500.0])
+        .with_decorations(false)
+        .with_transparent(false);
+
+    if let Some(icon) = load_window_icon() {
+        viewport = viewport.with_icon(Arc::new(icon));
+    }
+
     let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default()
-            .with_title("VanceSender")
-            .with_inner_size([1100.0, 750.0])
-            .with_min_inner_size([800.0, 500.0])
-            .with_decorations(false)
-            .with_transparent(false),
+        viewport,
         ..Default::default()
     };
 

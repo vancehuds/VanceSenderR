@@ -132,6 +132,17 @@ fn main() {
     // Flush stats on exit
     app_state.stats.write().flush();
     tracing::info!("VanceSender exited.");
+
+    // Watchdog — ensure the process exits even if the HTTP server hangs.
+    // Give 2 seconds for graceful shutdown, then force exit.
+    std::thread::spawn(|| {
+        std::thread::sleep(std::time::Duration::from_secs(2));
+        tracing::warn!("Watchdog: forcing process exit after timeout");
+        std::process::exit(0);
+    });
+
+    // Drop the runtime (begins graceful shutdown of HTTP server)
+    drop(rt);
 }
 
 async fn run_http_server(state: state::SharedState, host: &str, port: u16) {

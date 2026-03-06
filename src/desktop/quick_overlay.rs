@@ -11,6 +11,8 @@ use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
 
+use super::status_overlay::{self, StatusOverlayHandle};
+
 
 
 #[cfg(windows)]
@@ -142,6 +144,7 @@ pub struct QuickOverlay {
     command_tx: Option<std::sync::mpsc::Sender<OverlayCommand>>,
     command_rx: Option<std::sync::mpsc::Receiver<OverlayCommand>>,
     egui_ctx: Option<eframe::egui::Context>,
+    status_overlay: Option<StatusOverlayHandle>,
 }
 
 impl QuickOverlay {
@@ -154,6 +157,7 @@ impl QuickOverlay {
             command_tx: Some(tx),
             command_rx: Some(rx),
             egui_ctx: None,
+            status_overlay: None,
         }
     }
 
@@ -229,6 +233,10 @@ impl QuickOverlay {
 
         self.poll_thread = thread;
         self.enabled = true;
+
+        // Start the floating status bar window
+        self.status_overlay = Some(status_overlay::start_status_overlay());
+
         tracing::info!("Quick overlay started (hotkey={hotkey:?}, mouse={mouse_button:?})");
     }
 
@@ -238,6 +246,10 @@ impl QuickOverlay {
         if let Some(handle) = self.poll_thread.take() {
             let _ = handle.join();
         }
+        if let Some(ref overlay) = self.status_overlay {
+            overlay.destroy();
+        }
+        self.status_overlay = None;
         self.enabled = false;
     }
 
@@ -248,8 +260,19 @@ impl QuickOverlay {
     }
 
     /// Send a status update (called from send operations).
+    /// Shows the text on the floating status bar window.
     #[allow(dead_code)]
     pub fn send_status(&self, text: &str, done: bool) {
+        // Show on floating Win32 status bar
+        if let Some(ref overlay) = self.status_overlay {
+            if done {
+                // Show final message briefly, then auto-hide
+                overlay.show_status(text);
+            } else {
+                overlay.show_status(text);
+            }
+        }
+        // Also forward to egui channel for GUI panel updates
         if let Some(ref tx) = self.command_tx {
             let _ = tx.send(OverlayCommand::StatusUpdate {
                 text: text.to_string(),

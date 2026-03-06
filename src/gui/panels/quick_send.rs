@@ -144,7 +144,7 @@ pub fn render(
 
                 ui.add_space(8.0);
 
-                egui::ScrollArea::vertical().show(ui, |ui| {
+                egui::ScrollArea::vertical().auto_shrink(false).show(ui, |ui| {
                     for line in preset.texts.iter() {
                         egui::Frame::NONE
                             .fill(theme::BG_CARD)
@@ -152,7 +152,8 @@ pub fn render(
                             .inner_margin(10.0)
                             .stroke(egui::Stroke::new(1.0, theme::BORDER))
                             .show(ui, |ui| {
-                                ui.horizontal(|ui| {
+                                // Type tag + text content (wrapping)
+                                ui.horizontal_wrapped(|ui| {
                                     let type_color = match line.r#type.as_str() {
                                         "me" => theme::ACCENT,
                                         "do" => theme::SUCCESS,
@@ -170,34 +171,35 @@ pub fn render(
                                             .color(theme::TEXT_PRIMARY)
                                             .size(13.0),
                                     );
-
-                                    ui.with_layout(
-                                        egui::Layout::right_to_left(egui::Align::Center),
-                                        |ui| {
-                                            if ui.small_button("📤 发送").clicked() {
-                                                // Send single line
-                                                let text = format!("/{} {}", line.r#type, line.content);
-                                                let tx = async_tx.clone();
-                                                let state_clone = state.clone();
-                                                let ctx = ui.ctx().clone();
-
-                                                tokio_handle.spawn_blocking(move || {
-                                                    let cfg = config::load_config();
-                                                    let sender_cfg = SenderConfig::from_yaml(&cfg);
-                                                    let sender = state_clone.sender.read();
-                                                    let success = sender.send_single(&text, &sender_cfg).is_ok();
-                                                    history::record_send(&text, success, "gui-quick");
-                                                    state_clone.stats.write().record_send(success, None);
-                                                    let _ = tx.send(AsyncResult::SendSingleDone {
-                                                        text,
-                                                        success,
-                                                    });
-                                                    ctx.request_repaint();
-                                                });
-                                            }
-                                        },
-                                    );
                                 });
+
+                                // Send button on its own row, right-aligned
+                                ui.with_layout(
+                                    egui::Layout::right_to_left(egui::Align::Center),
+                                    |ui| {
+                                        if ui.small_button("📤 发送").clicked() {
+                                            // Send single line
+                                            let text = format!("/{} {}", line.r#type, line.content);
+                                            let tx = async_tx.clone();
+                                            let state_clone = state.clone();
+                                            let ctx = ui.ctx().clone();
+
+                                            tokio_handle.spawn_blocking(move || {
+                                                let cfg = config::load_config();
+                                                let sender_cfg = SenderConfig::from_yaml(&cfg);
+                                                let sender = state_clone.sender.read();
+                                                let success = sender.send_single(&text, &sender_cfg).is_ok();
+                                                history::record_send(&text, success, "gui-quick");
+                                                state_clone.stats.write().record_send(success, None);
+                                                let _ = tx.send(AsyncResult::SendSingleDone {
+                                                    text,
+                                                    success,
+                                                });
+                                                ctx.request_repaint();
+                                            });
+                                        }
+                                    },
+                                );
                             });
                         ui.add_space(4.0);
                     }

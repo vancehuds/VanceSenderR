@@ -138,7 +138,7 @@ pub fn render(ui: &mut egui::Ui, _state: &SharedState, ps: &mut PresetsState, to
     } else {
         let mut action: Option<PresetAction> = None;
 
-        egui::ScrollArea::vertical().show(ui, |ui| {
+        egui::ScrollArea::vertical().auto_shrink(false).show(ui, |ui| {
             for preset in &filtered {
                 egui::Frame::NONE
                     .fill(theme::BG_CARD)
