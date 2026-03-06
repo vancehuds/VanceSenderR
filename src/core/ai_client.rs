@@ -414,6 +414,8 @@ pub async fn rewrite_texts(
     texts: &[TextLine],
     provider_id: Option<&str>,
     instruction: Option<&str>,
+    style: Option<&str>,
+    requirements: Option<&str>,
     text_type: Option<&str>,
     temperature: Option<f64>,
 ) -> AppResult<(Vec<TextLine>, String)> {
@@ -427,6 +429,16 @@ pub async fn rewrite_texts(
     if let Some(inst) = instruction {
         if !inst.is_empty() {
             user_prompt.push_str(&format!("重写要求：{inst}\n"));
+        }
+    }
+    if let Some(s) = style {
+        if !s.is_empty() {
+            user_prompt.push_str(&format!("重写风格：{s}\n"));
+        }
+    }
+    if let Some(r) = requirements {
+        if !r.is_empty() {
+            user_prompt.push_str(&format!("额外要求：{r}\n"));
         }
     }
     if let Some(tt) = text_type {

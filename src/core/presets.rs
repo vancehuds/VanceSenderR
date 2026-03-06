@@ -145,6 +145,68 @@ pub fn delete_preset_file(id: &str) -> AppResult<()> {
     Ok(())
 }
 
+/// Create a new preset from JSON data.
+pub fn create_preset(data: &serde_json::Value) -> AppResult<Preset> {
+    let id = uuid::Uuid::new_v4().to_string();
+    let now = now_iso();
+
+    let name = data["name"].as_str().unwrap_or("未命名").to_string();
+    let tags: Vec<String> = data["tags"]
+        .as_array()
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                .collect()
+        })
+        .unwrap_or_default();
+
+    let texts: Vec<TextLine> = if let Some(arr) = data["texts"].as_array() {
+        serde_json::from_value(serde_json::Value::Array(arr.clone())).unwrap_or_default()
+    } else {
+        vec![]
+    };
+
+    let preset = Preset {
+        id: id.clone(),
+        name,
+        texts,
+        tags,
+        sort_order: 0,
+        created_at: now.clone(),
+        updated_at: now,
+    };
+
+    write_preset(&id, &preset)?;
+    Ok(preset)
+}
+
+/// Update an existing preset with partial JSON data.
+pub fn update_preset(id: &str, data: &serde_json::Value) -> AppResult<Preset> {
+    let mut preset = read_preset(id)?;
+
+    if let Some(name) = data["name"].as_str() {
+        preset.name = name.to_string();
+    }
+    if let Some(arr) = data["tags"].as_array() {
+        preset.tags = arr
+            .iter()
+            .filter_map(|v| v.as_str().map(|s| s.to_string()))
+            .collect();
+    }
+    if let Some(arr) = data["texts"].as_array() {
+        if let Ok(texts) = serde_json::from_value::<Vec<TextLine>>(serde_json::Value::Array(arr.clone())) {
+            preset.texts = texts;
+        }
+    }
+    if let Some(order) = data["sort_order"].as_i64() {
+        preset.sort_order = order;
+    }
+    preset.updated_at = now_iso();
+
+    write_preset(id, &preset)?;
+    Ok(preset)
+}
+
 pub fn now_iso() -> String {
     chrono::Utc::now().to_rfc3339()
 }

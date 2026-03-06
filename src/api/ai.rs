@@ -34,6 +34,8 @@ pub struct AIRewriteRequest {
     pub texts: Vec<TextLine>,
     pub provider_id: Option<String>,
     pub instruction: Option<String>,
+    pub style: Option<String>,
+    pub requirements: Option<String>,
     pub text_type: Option<String>,
     pub temperature: Option<f64>,
 }
@@ -138,6 +140,8 @@ pub async fn ai_rewrite(Json(body): Json<AIRewriteRequest>) -> AppResult<Json<Js
         &body.texts,
         body.provider_id.as_deref(),
         body.instruction.as_deref(),
+        body.style.as_deref(),
+        body.requirements.as_deref(),
         body.text_type.as_deref(),
         body.temperature,
     )

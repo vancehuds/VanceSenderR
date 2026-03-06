@@ -11,7 +11,9 @@ pub mod widgets;
 use eframe::egui;
 
 
+use crate::config;
 use crate::core::presets::TextLine;
+use crate::desktop::quick_overlay::{QuickOverlay, OverlayCommand};
 use crate::desktop::tray::{TrayCommand, TrayManager};
 use crate::state::SharedState;
 
@@ -87,6 +89,10 @@ pub struct VanceSenderApp {
 
     // Desktop integration
     pub tray: TrayManager,
+    pub quick_overlay: QuickOverlay,
+    pub overlay_rx: Option<std::sync::mpsc::Receiver<OverlayCommand>>,
+    pub close_action: String,  // "ask", "minimize_to_tray", "exit"
+    pub show_close_dialog: bool,
 
     // Panel states
     pub home_state: panels::home::HomeState,
@@ -129,6 +135,20 @@ impl VanceSenderApp {
             ctx_clone.request_repaint();
         });
 
+        // Start quick overlay if enabled
+        let cfg = config::load_config();
+        let mut quick_overlay = QuickOverlay::new();
+        let overlay_enabled = config::get_bool(&cfg, "quick_overlay", "enabled");
+        if overlay_enabled {
+            let hotkey = config::get_str(&cfg, "quick_overlay", "trigger_hotkey").to_string();
+            let mouse_btn = config::get_str(&cfg, "quick_overlay", "mouse_side_button").to_string();
+            let poll_ms = config::get_i64(&cfg, "quick_overlay", "poll_interval_ms", 40) as u64;
+            quick_overlay.start(&hotkey, &mouse_btn, poll_ms);
+        }
+        let overlay_rx = quick_overlay.take_receiver();
+
+        let close_action = config::get_str(&cfg, "launch", "close_action").to_string();
+
         Self {
             state,
             current_panel: Panel::Home,
@@ -138,6 +158,10 @@ impl VanceSenderApp {
             async_rx: rx,
             tokio_handle,
             tray,
+            quick_overlay,
+            overlay_rx,
+            close_action,
+            show_close_dialog: false,
             home_state: panels::home::HomeState::default(),
             send_state: panels::send::SendState::default(),
             quick_send_state: panels::quick_send::QuickSendState::default(),
@@ -217,9 +241,53 @@ impl VanceSenderApp {
                     ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
                 }
                 TrayCommand::Exit => {
+                    self.quick_overlay.stop();
                     self.tray.stop();
                     ctx.send_viewport_cmd(egui::ViewportCommand::Close);
                 }
+            }
+        }
+    }
+
+    /// Handle quick overlay events.
+    fn handle_overlay_events(&mut self, ctx: &egui::Context) {
+        if let Some(ref rx) = self.overlay_rx {
+            while let Ok(cmd) = rx.try_recv() {
+                match cmd {
+                    OverlayCommand::HotkeyTriggered => {
+                        self.current_panel = Panel::QuickSend;
+                        ctx.send_viewport_cmd(egui::ViewportCommand::Visible(true));
+                        ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
+                    }
+                    OverlayCommand::StatusUpdate { text, done } => {
+                        if done {
+                            self.toasts.success(format!("✅ {text}"));
+                        } else {
+                            self.toasts.info(text);
+                        }
+                        ctx.request_repaint();
+                    }
+                }
+            }
+        }
+    }
+
+    /// Handle close-to-tray when window is about to close.
+    fn handle_close_request(&mut self, ctx: &egui::Context) {
+        match self.close_action.as_str() {
+            "minimize_to_tray" => {
+                ctx.send_viewport_cmd(egui::ViewportCommand::Visible(false));
+                ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
+            }
+            "exit" => {
+                // Let the close happen
+                self.quick_overlay.stop();
+                self.tray.stop();
+            }
+            _ => {
+                // "ask" — show close dialog
+                self.show_close_dialog = true;
+                ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
             }
         }
     }
@@ -232,6 +300,36 @@ impl eframe::App for VanceSenderApp {
 
         // Tray events
         self.handle_tray_events(ctx);
+
+        // Overlay events
+        self.handle_overlay_events(ctx);
+
+        // Close dialog
+        if self.show_close_dialog {
+            egui::Window::new("关闭确认")
+                .collapsible(false)
+                .resizable(false)
+                .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
+                .show(ctx, |ui| {
+                    ui.label("您想要关闭还是最小化到托盘？");
+                    ui.add_space(8.0);
+                    ui.horizontal(|ui| {
+                        if ui.button("最小化到托盘").clicked() {
+                            self.show_close_dialog = false;
+                            ctx.send_viewport_cmd(egui::ViewportCommand::Visible(false));
+                        }
+                        if ui.add(egui::Button::new("退出程序").fill(theme::DANGER)).clicked() {
+                            self.show_close_dialog = false;
+                            self.quick_overlay.stop();
+                            self.tray.stop();
+                            ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+                        }
+                        if ui.button("取消").clicked() {
+                            self.show_close_dialog = false;
+                        }
+                    });
+                });
+        }
 
         // Custom titlebar
         titlebar::render_titlebar(ctx);
@@ -273,12 +371,24 @@ impl eframe::App for VanceSenderApp {
                     &self.tokio_handle,
                 ),
                 Panel::Presets => panels::presets::render(ui, &self.state, &mut self.presets_state, &mut self.toasts),
-                Panel::Settings => panels::settings::render(ui, &self.state, &mut self.settings_state, &mut self.toasts),
+                Panel::Settings => panels::settings::render(
+                    ui,
+                    &self.state,
+                    &mut self.settings_state,
+                    &mut self.toasts,
+                    &self.async_tx,
+                    &self.tokio_handle,
+                ),
             }
         });
 
         // Render toasts
         self.toasts.show(ctx);
+
+        // Handle viewport close request (minimize to tray / ask / exit)
+        if ctx.input(|i| i.viewport().close_requested()) {
+            self.handle_close_request(ctx);
+        }
     }
 }
 

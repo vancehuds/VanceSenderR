@@ -97,6 +97,16 @@ fn main() {
     let state_for_server = app_state.clone();
     let host_for_server = host.clone();
 
+    // Port guard — check if port is available
+    match crate::core::port_guard::ensure_startup_port_available(&host, port) {
+        Ok(()) => {}
+        Err(e) => {
+            tracing::error!("端口检查失败: {e}");
+            eprintln!("❌ {e}");
+            std::process::exit(1);
+        }
+    }
+
     // Start HTTP server in background
     rt.spawn(async move {
         run_http_server(state_for_server, &host_for_server, port).await;

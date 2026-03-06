@@ -3,6 +3,7 @@
 use eframe::egui;
 use crate::state::SharedState;
 use crate::gui::theme;
+use crate::gui::{AsyncResult, AsyncTx};
 use crate::config;
 
 #[derive(Default)]
@@ -18,6 +19,8 @@ pub struct SettingsState {
     pub delay_between_lines: String,
     pub focus_timeout: String,
     pub retry_count: String,
+    pub retry_interval: String,
+    pub typing_char_delay: String,
     // Server
     pub host: String,
     pub port: String,
@@ -26,9 +29,19 @@ pub struct SettingsState {
     // AI
     pub default_provider: String,
     pub system_prompt: String,
+    // AI provider add
+    pub show_add_provider: bool,
+    pub new_provider_name: String,
+    pub new_provider_api_base: String,
+    pub new_provider_api_key: String,
+    pub new_provider_model: String,
     // Overlay
     pub overlay_enabled: bool,
     pub trigger_hotkey: String,
+    pub mouse_side_button: String,
+    pub poll_interval_ms: String,
+    pub compact_mode: bool,
+    pub show_webui_send_status: bool,
 }
 
 #[derive(Default, PartialEq)]
@@ -40,7 +53,14 @@ pub enum SettingsTab {
     Overlay,
 }
 
-pub fn render(ui: &mut egui::Ui, _state: &SharedState, ss: &mut SettingsState, toasts: &mut egui_notify::Toasts) {
+pub fn render(
+    ui: &mut egui::Ui,
+    _state: &SharedState,
+    ss: &mut SettingsState,
+    toasts: &mut egui_notify::Toasts,
+    async_tx: &AsyncTx,
+    tokio_handle: &tokio::runtime::Handle,
+) {
     if !ss.loaded {
         load_settings(ss);
         ss.loaded = true;
@@ -69,7 +89,7 @@ pub fn render(ui: &mut egui::Ui, _state: &SharedState, ss: &mut SettingsState, t
         match ss.active_tab {
             SettingsTab::Sender => render_sender_settings(ui, ss, toasts),
             SettingsTab::Server => render_server_settings(ui, ss, toasts),
-            SettingsTab::AI => render_ai_settings(ui, ss, toasts),
+            SettingsTab::AI => render_ai_settings(ui, ss, toasts, async_tx, tokio_handle),
             SettingsTab::Overlay => render_overlay_settings(ui, ss, toasts),
         }
     });
@@ -132,6 +152,8 @@ fn render_sender_settings(ui: &mut egui::Ui, ss: &mut SettingsState, toasts: &mu
             setting_row(ui, "行间延迟(ms)", &mut ss.delay_between_lines, "1800");
             setting_row(ui, "焦点超时(ms)", &mut ss.focus_timeout, "8000");
             setting_row(ui, "重试次数", &mut ss.retry_count, "3");
+            setting_row(ui, "重试间隔(ms)", &mut ss.retry_interval, "450");
+            setting_row(ui, "逐字延迟(ms)", &mut ss.typing_char_delay, "18");
 
             ui.add_space(8.0);
             if ui.add(egui::Button::new("💾 保存").fill(theme::ACCENT)).clicked() {
@@ -168,14 +190,33 @@ fn render_server_settings(ui: &mut egui::Ui, ss: &mut SettingsState, toasts: &mu
                 ui.checkbox(&mut ss.lan_access, "");
             });
 
+            if ss.lan_access && ss.token.trim().is_empty() {
+                ui.add_space(4.0);
+                ui.label(
+                    egui::RichText::new("⚠ 开启局域网但未设置令牌，任何人都可以访问")
+                        .size(12.0)
+                        .color(theme::DANGER),
+                );
+            }
+
             ui.add_space(8.0);
             if ui.add(egui::Button::new("💾 保存").fill(theme::ACCENT)).clicked() {
-                toasts.info("服务器配置已保存（重启后生效）");
+                if let Err(e) = save_server_settings(ss) {
+                    toasts.error(format!("保存失败: {e}"));
+                } else {
+                    toasts.success("服务器配置已保存（重启后生效）");
+                }
             }
         });
 }
 
-fn render_ai_settings(ui: &mut egui::Ui, ss: &mut SettingsState, toasts: &mut egui_notify::Toasts) {
+fn render_ai_settings(
+    ui: &mut egui::Ui,
+    ss: &mut SettingsState,
+    toasts: &mut egui_notify::Toasts,
+    async_tx: &AsyncTx,
+    tokio_handle: &tokio::runtime::Handle,
+) {
     egui::Frame::NONE
         .fill(theme::BG_CARD)
         .corner_radius(10.0)
@@ -193,6 +234,7 @@ fn render_ai_settings(ui: &mut egui::Ui, ss: &mut SettingsState, toasts: &mut eg
             // Provider list
             let cfg = config::load_config();
             let providers = config::get_providers(&cfg);
+            let mut provider_to_delete: Option<String> = None;
 
             if providers.is_empty() {
                 ui.label(
@@ -211,13 +253,108 @@ fn render_ai_settings(ui: &mut egui::Ui, ss: &mut SettingsState, toasts: &mut eg
                                 .size(11.0)
                                 .color(theme::TEXT_MUTED),
                         );
+                        ui.label(
+                            egui::RichText::new(if provider.api_key.is_empty() { "🔑❌" } else { "🔑✅" })
+                                .size(11.0),
+                        );
+
+                        // Test button
+                        if ui.small_button("🧪 测试").clicked() {
+                            let pid = provider.id.clone();
+                            let tx = async_tx.clone();
+                            let ctx = ui.ctx().clone();
+                            tokio_handle.spawn(async move {
+                                let result = crate::core::ai_client::test_provider(&pid).await;
+                                let (success, message) = match result {
+                                    Ok(val) => {
+                                        let msg = val["message"].as_str().unwrap_or("连接成功").to_string();
+                                        (true, msg)
+                                    }
+                                    Err(e) => (false, e.to_string()),
+                                };
+                                let _ = tx.send(AsyncResult::AiProviderTestDone {
+                                    provider_id: pid,
+                                    success,
+                                    message,
+                                });
+                                ctx.request_repaint();
+                            });
+                        }
+
+                        // Delete button
+                        if ui.small_button(
+                            egui::RichText::new("🗑").color(theme::DANGER),
+                        ).clicked() {
+                            provider_to_delete = Some(provider.id.clone());
+                        }
                     });
                 }
             }
 
+            // Process deferred deletions
+            if let Some(id) = provider_to_delete {
+                match config::delete_provider(&id) {
+                    Ok(()) => { toasts.success("已删除服务商"); }
+                    Err(e) => { toasts.error(format!("删除失败: {e}")); }
+                }
+            }
+
             ui.add_space(8.0);
-            if ui.button("➕ 添加服务商").clicked() {
-                toasts.info("添加服务商功能已就绪");
+
+            // Add provider toggle
+            if !ss.show_add_provider {
+                if ui.button("➕ 添加服务商").clicked() {
+                    ss.show_add_provider = true;
+                    ss.new_provider_name.clear();
+                    ss.new_provider_api_base.clear();
+                    ss.new_provider_api_key.clear();
+                    ss.new_provider_model = "gpt-4o".to_string();
+                }
+            } else {
+                egui::Frame::NONE
+                    .fill(theme::BG_MAIN)
+                    .corner_radius(8.0)
+                    .inner_margin(12.0)
+                    .stroke(egui::Stroke::new(1.0, theme::ACCENT))
+                    .show(ui, |ui| {
+                        ui.label(
+                            egui::RichText::new("添加新服务商")
+                                .size(13.0)
+                                .color(theme::ACCENT)
+                                .strong(),
+                        );
+                        ui.add_space(4.0);
+                        setting_row(ui, "名称", &mut ss.new_provider_name, "例: OpenAI");
+                        setting_row(ui, "API Base", &mut ss.new_provider_api_base, "https://api.openai.com/v1");
+                        setting_row(ui, "API Key", &mut ss.new_provider_api_key, "sk-...");
+                        setting_row(ui, "模型", &mut ss.new_provider_model, "gpt-4o");
+
+                        ui.horizontal(|ui| {
+                            if ui.add(egui::Button::new("✅ 确认").fill(theme::ACCENT)).clicked() {
+                                if ss.new_provider_name.trim().is_empty() {
+                                    toasts.error("服务商名称不能为空");
+                                } else {
+                                    let provider = config::ProviderConfig {
+                                        id: uuid::Uuid::new_v4().to_string(),
+                                        name: ss.new_provider_name.trim().to_string(),
+                                        api_base: ss.new_provider_api_base.trim().to_string(),
+                                        api_key: ss.new_provider_api_key.trim().to_string(),
+                                        model: ss.new_provider_model.trim().to_string(),
+                                    };
+                                    match config::add_provider(provider) {
+                                        Ok(()) => {
+                                            toasts.success("已添加服务商");
+                                            ss.show_add_provider = false;
+                                        }
+                                        Err(e) => { toasts.error(format!("添加失败: {e}")); }
+                                    }
+                                }
+                            }
+                            if ui.button("❌ 取消").clicked() {
+                                ss.show_add_provider = false;
+                            }
+                        });
+                    });
             }
 
             ui.add_space(12.0);
@@ -231,7 +368,11 @@ fn render_ai_settings(ui: &mut egui::Ui, ss: &mut SettingsState, toasts: &mut eg
 
             ui.add_space(8.0);
             if ui.add(egui::Button::new("💾 保存").fill(theme::ACCENT)).clicked() {
-                toasts.info("AI设置已保存");
+                if let Err(e) = save_ai_settings(ss) {
+                    toasts.error(format!("保存失败: {e}"));
+                } else {
+                    toasts.success("AI设置已保存");
+                }
             }
         });
 }
@@ -257,16 +398,32 @@ fn render_overlay_settings(ui: &mut egui::Ui, ss: &mut SettingsState, toasts: &m
             });
             ui.add_space(4.0);
             setting_row(ui, "触发热键", &mut ss.trigger_hotkey, "f7");
+            setting_row(ui, "鼠标侧键", &mut ss.mouse_side_button, "xbutton1");
+            setting_row(ui, "轮询间隔(ms)", &mut ss.poll_interval_ms, "40");
+
+            ui.horizontal(|ui| {
+                ui.label(egui::RichText::new("紧凑模式:").color(theme::TEXT_SECONDARY).size(13.0));
+                ui.checkbox(&mut ss.compact_mode, "");
+            });
+            ui.horizontal(|ui| {
+                ui.label(egui::RichText::new("显示发送状态:").color(theme::TEXT_SECONDARY).size(13.0));
+                ui.checkbox(&mut ss.show_webui_send_status, "");
+            });
 
             ui.add_space(8.0);
             if ui.add(egui::Button::new("💾 保存").fill(theme::ACCENT)).clicked() {
-                toasts.info("悬浮窗设置已保存");
+                if let Err(e) = save_overlay_settings(ss) {
+                    toasts.error(format!("保存失败: {e}"));
+                } else {
+                    toasts.success("悬浮窗设置已保存");
+                }
             }
         });
 }
 
 fn load_settings(ss: &mut SettingsState) {
     let cfg = config::load_config();
+    // Sender
     ss.method = config::get_str(&cfg, "sender", "method").to_string();
     ss.chat_open_key = config::get_str(&cfg, "sender", "chat_open_key").to_string();
     ss.delay_open_chat = config::get_i64(&cfg, "sender", "delay_open_chat", 450).to_string();
@@ -275,14 +432,28 @@ fn load_settings(ss: &mut SettingsState) {
     ss.delay_between_lines = config::get_i64(&cfg, "sender", "delay_between_lines", 1800).to_string();
     ss.focus_timeout = config::get_i64(&cfg, "sender", "focus_timeout", 8000).to_string();
     ss.retry_count = config::get_i64(&cfg, "sender", "retry_count", 3).to_string();
+    ss.retry_interval = config::get_i64(&cfg, "sender", "retry_interval", 450).to_string();
+    ss.typing_char_delay = config::get_i64(&cfg, "sender", "typing_char_delay", 18).to_string();
+    // Server
     ss.host = config::get_str(&cfg, "server", "host").to_string();
     ss.port = config::get_i64(&cfg, "server", "port", 8730).to_string();
     ss.token = config::get_str(&cfg, "server", "token").to_string();
     ss.lan_access = config::get_bool(&cfg, "server", "lan_access");
+    // AI
     ss.default_provider = config::get_str(&cfg, "ai", "default_provider").to_string();
     ss.system_prompt = config::get_str(&cfg, "ai", "system_prompt").to_string();
+    // Overlay
     ss.overlay_enabled = config::get_bool(&cfg, "quick_overlay", "enabled");
     ss.trigger_hotkey = config::get_str(&cfg, "quick_overlay", "trigger_hotkey").to_string();
+    ss.mouse_side_button = config::get_str(&cfg, "quick_overlay", "mouse_side_button").to_string();
+    ss.poll_interval_ms = config::get_i64(&cfg, "quick_overlay", "poll_interval_ms", 40).to_string();
+    ss.compact_mode = config::get_bool(&cfg, "quick_overlay", "compact_mode");
+    ss.show_webui_send_status = {
+        cfg.get("quick_overlay")
+            .and_then(|s| s.get("show_webui_send_status"))
+            .and_then(|v| v.as_bool())
+            .unwrap_or(true)
+    };
 }
 
 fn save_sender_settings(ss: &SettingsState) -> Result<(), String> {
@@ -296,6 +467,47 @@ fn save_sender_settings(ss: &SettingsState) -> Result<(), String> {
             "delay_between_lines": ss.delay_between_lines.parse::<i64>().unwrap_or(1800),
             "focus_timeout": ss.focus_timeout.parse::<i64>().unwrap_or(8000),
             "retry_count": ss.retry_count.parse::<i64>().unwrap_or(3),
+            "retry_interval": ss.retry_interval.parse::<i64>().unwrap_or(450),
+            "typing_char_delay": ss.typing_char_delay.parse::<i64>().unwrap_or(18),
+        }
+    }))
+    .map_err(|e| e.to_string())?;
+    config::update_config(&patch).map_err(|e| e.to_string())
+}
+
+fn save_server_settings(ss: &SettingsState) -> Result<(), String> {
+    let patch = serde_yaml::to_value(&serde_json::json!({
+        "server": {
+            "host": ss.host,
+            "port": ss.port.parse::<i64>().unwrap_or(8730),
+            "token": ss.token,
+            "lan_access": ss.lan_access,
+        }
+    }))
+    .map_err(|e| e.to_string())?;
+    config::update_config(&patch).map_err(|e| e.to_string())
+}
+
+fn save_ai_settings(ss: &SettingsState) -> Result<(), String> {
+    let patch = serde_yaml::to_value(&serde_json::json!({
+        "ai": {
+            "default_provider": ss.default_provider,
+            "system_prompt": ss.system_prompt,
+        }
+    }))
+    .map_err(|e| e.to_string())?;
+    config::update_config(&patch).map_err(|e| e.to_string())
+}
+
+fn save_overlay_settings(ss: &SettingsState) -> Result<(), String> {
+    let patch = serde_yaml::to_value(&serde_json::json!({
+        "quick_overlay": {
+            "enabled": ss.overlay_enabled,
+            "trigger_hotkey": ss.trigger_hotkey,
+            "mouse_side_button": ss.mouse_side_button,
+            "poll_interval_ms": ss.poll_interval_ms.parse::<i64>().unwrap_or(40),
+            "compact_mode": ss.compact_mode,
+            "show_webui_send_status": ss.show_webui_send_status,
         }
     }))
     .map_err(|e| e.to_string())?;

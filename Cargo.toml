@@ -54,6 +54,7 @@ futures-util = "0.3"
 hostname = "0.4"
 url = "2"
 open = "5"
+rfd = "0.15"
 
 # Desktop integration
 tray-icon = "0.19"

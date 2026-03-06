@@ -3,6 +3,7 @@ pub mod ai_history;
 pub mod history;
 pub mod network;
 pub mod notifications;
+pub mod port_guard;
 pub mod presets;
 pub mod public_config;
 pub mod sender;
