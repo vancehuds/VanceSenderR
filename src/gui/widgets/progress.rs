@@ -18,7 +18,7 @@ pub fn render_send_progress(
 
     egui::Frame::NONE
         .fill(theme::BG_CARD)
-        .rounding(8.0)
+        .corner_radius(8.0)
         .inner_margin(12.0)
         .stroke(egui::Stroke::new(1.0, theme::BORDER))
         .show(ui, |ui| {

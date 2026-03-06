@@ -27,9 +27,7 @@ pub fn render_titlebar(ctx: &egui::Context) {
                     Sense::drag(),
                 );
                 if drag_rect.1.dragged() {
-                    if let Some(viewport_id) = ui.input(|i| Some(i.viewport().this)) {
-                        ui.ctx().send_viewport_cmd(egui::ViewportCommand::StartDrag);
-                    }
+                    ui.ctx().send_viewport_cmd(egui::ViewportCommand::StartDrag);
                 }
 
                 // Window controls

@@ -114,7 +114,7 @@ pub fn render(ui: &mut egui::Ui, state: &SharedState, ps: &mut PresetsState, toa
                     .color(theme::TEXT_MUTED),
             );
             ui.label(
-                egui::RichText::new("点击"新建预设"开始创建")
+                egui::RichText::new("点击「新建预设」开始创建")
                     .size(12.0)
                     .color(theme::TEXT_MUTED),
             );
@@ -124,7 +124,7 @@ pub fn render(ui: &mut egui::Ui, state: &SharedState, ps: &mut PresetsState, toa
             for preset in &filtered {
                 egui::Frame::NONE
                     .fill(theme::BG_CARD)
-                    .rounding(10.0)
+                    .corner_radius(10.0)
                     .inner_margin(14.0)
                     .stroke(egui::Stroke::new(1.0, theme::BORDER))
                     .show(ui, |ui| {

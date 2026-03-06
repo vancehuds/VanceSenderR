@@ -5,7 +5,7 @@
 /// - Atomic writes via temp-file + rename
 /// - Deep merge for partial updates
 
-use std::collections::HashMap;
+
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
@@ -13,7 +13,7 @@ use std::time::SystemTime;
 
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
-use serde_json::Value as JsonValue;
+
 use serde_yaml::Value as YamlValue;
 
 use crate::error::{AppError, AppResult};

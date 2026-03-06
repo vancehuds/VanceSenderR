@@ -20,7 +20,7 @@ pub fn render(ui: &mut egui::Ui, state: &SharedState, home: &mut HomeState) {
         // Hero card
         egui::Frame::NONE
             .fill(theme::BG_CARD)
-            .rounding(12.0)
+            .corner_radius(12.0)
             .inner_margin(20.0)
             .stroke(egui::Stroke::new(1.0, theme::BORDER))
             .show(ui, |ui| {
@@ -76,7 +76,7 @@ pub fn render(ui: &mut egui::Ui, state: &SharedState, home: &mut HomeState) {
                 if !ips.is_empty() {
                     egui::Frame::NONE
                         .fill(theme::BG_CARD)
-                        .rounding(12.0)
+                        .corner_radius(12.0)
                         .inner_margin(16.0)
                         .stroke(egui::Stroke::new(1.0, theme::SUCCESS.linear_multiply(0.3)))
                         .show(ui, |ui| {
@@ -103,7 +103,7 @@ pub fn render(ui: &mut egui::Ui, state: &SharedState, home: &mut HomeState) {
         // Update check
         egui::Frame::NONE
             .fill(theme::BG_CARD)
-            .rounding(12.0)
+            .corner_radius(12.0)
             .inner_margin(16.0)
             .stroke(egui::Stroke::new(1.0, theme::BORDER))
             .show(ui, |ui| {
@@ -154,7 +154,7 @@ pub fn render(ui: &mut egui::Ui, state: &SharedState, home: &mut HomeState) {
                 ui.add_space(12.0);
                 egui::Frame::NONE
                     .fill(theme::BG_CARD)
-                    .rounding(12.0)
+                    .corner_radius(12.0)
                     .inner_margin(16.0)
                     .stroke(egui::Stroke::new(1.0, theme::ACCENT.linear_multiply(0.3)))
                     .show(ui, |ui| {
@@ -195,7 +195,7 @@ pub fn render(ui: &mut egui::Ui, state: &SharedState, home: &mut HomeState) {
 fn stat_card(ui: &mut egui::Ui, label: &str, value: &str, icon: &str) {
     egui::Frame::NONE
         .fill(theme::BG_CARD)
-        .rounding(10.0)
+        .corner_radius(10.0)
         .inner_margin(12.0)
         .stroke(egui::Stroke::new(1.0, theme::BORDER))
         .show(ui, |ui| {

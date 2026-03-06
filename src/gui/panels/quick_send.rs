@@ -44,7 +44,7 @@ pub fn render(
     // Preset selector
     egui::Frame::NONE
         .fill(theme::BG_CARD)
-        .rounding(10.0)
+        .corner_radius(10.0)
         .inner_margin(12.0)
         .stroke(egui::Stroke::new(1.0, theme::BORDER))
         .show(ui, |ui| {
@@ -147,7 +147,7 @@ pub fn render(
                     for (i, line) in preset.texts.iter().enumerate() {
                         egui::Frame::NONE
                             .fill(theme::BG_CARD)
-                            .rounding(8.0)
+                            .corner_radius(8.0)
                             .inner_margin(10.0)
                             .stroke(egui::Stroke::new(1.0, theme::BORDER))
                             .show(ui, |ui| {

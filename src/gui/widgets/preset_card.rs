@@ -25,8 +25,8 @@ pub fn render_preset_card(
 
     egui::Frame::NONE
         .fill(theme::BG_CARD)
-        .rounding(10.0)
-        .inner_margin(egui::Margin::symmetric(14.0, 12.0))
+        .corner_radius(10.0)
+        .inner_margin(egui::Margin::symmetric(14, 12))
         .stroke(egui::Stroke::new(1.0, theme::BORDER))
         .show(ui, |ui| {
             ui.horizontal(|ui| {

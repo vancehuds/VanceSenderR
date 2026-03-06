@@ -54,7 +54,7 @@ fn pill_button(ui: &mut egui::Ui, label: &str, active: bool) -> egui::Response {
         egui::RichText::new(label).size(12.0).color(text_color),
     )
     .fill(bg)
-    .rounding(16.0)
+    .corner_radius(16.0)
     .stroke(egui::Stroke::new(
         1.0,
         if active {

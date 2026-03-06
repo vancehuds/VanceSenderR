@@ -6,7 +6,7 @@ pub mod sender;
 pub mod settings;
 pub mod stats;
 
-use std::sync::Arc;
+
 
 use axum::extract::Request;
 use axum::http::StatusCode;
@@ -113,12 +113,12 @@ async fn auth_middleware(
         let params: Vec<(String, String)> = url::form_urlencoded::parse(query.as_bytes())
             .map(|(k, v)| (k.to_string(), v.to_string()))
             .collect();
-        let token_param = params
+        let token_value = params
             .iter()
             .find(|(k, _)| k == "vs_token" || k == "token")
-            .map(|(_, v)| v.as_str())
-            .unwrap_or("");
-        token_param
+            .map(|(_, v)| v.clone())
+            .unwrap_or_default();
+        token_value
     };
 
     if provided_token == token {

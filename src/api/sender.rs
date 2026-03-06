@@ -1,20 +1,20 @@
 /// Send routes — single + batch (SSE) + status + history.
 
-use std::sync::Arc;
+
 use std::convert::Infallible;
 
 use axum::extract::{Query, State};
 use axum::response::sse::{Event, Sse};
 use axum::Json;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use serde_json::json;
 use tokio_stream::StreamExt;
 
 use crate::config;
 use crate::core::history;
 use crate::core::sender::{SenderConfig, SendProgress};
-use crate::core::stats;
-use crate::error::AppResult;
+
+
 use crate::state::SharedState;
 
 #[derive(Deserialize)]

@@ -2,7 +2,7 @@
 
 use std::convert::Infallible;
 
-use axum::extract::{Path, Query, State};
+use axum::extract::{Path, Query};
 use axum::response::sse::{Event, Sse};
 use axum::Json;
 use serde::Deserialize;
@@ -11,8 +11,8 @@ use serde_json::{json, Value as JsonValue};
 use crate::core::ai_client;
 use crate::core::ai_history;
 use crate::core::presets::TextLine;
-use crate::error::{AppError, AppResult};
-use crate::state::SharedState;
+use crate::error::AppResult;
+
 
 #[derive(Deserialize)]
 pub struct AIGenerateRequest {

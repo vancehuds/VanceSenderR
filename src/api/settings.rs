@@ -7,7 +7,7 @@ use serde_json::{json, Value as JsonValue};
 use serde_yaml::Value as YamlValue;
 
 use crate::config::{self, ProviderConfig};
-use crate::core::network::get_lan_ipv4_addresses;
+
 use crate::core::public_config;
 use crate::core::update_checker;
 use crate::error::{AppError, AppResult};

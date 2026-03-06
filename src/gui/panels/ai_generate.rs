@@ -44,7 +44,7 @@ pub fn render(
     // Input area
     egui::Frame::NONE
         .fill(theme::BG_CARD)
-        .rounding(10.0)
+        .corner_radius(10.0)
         .inner_margin(16.0)
         .stroke(egui::Stroke::new(1.0, theme::BORDER))
         .show(ui, |ui| {
@@ -153,7 +153,7 @@ pub fn render(
     if !ai.stream_content.is_empty() || !ai.generated_texts.is_empty() {
         egui::Frame::NONE
             .fill(theme::BG_CARD)
-            .rounding(10.0)
+            .corner_radius(10.0)
             .inner_margin(16.0)
             .stroke(egui::Stroke::new(1.0, theme::BORDER))
             .show(ui, |ui| {
@@ -276,7 +276,7 @@ pub fn render(
             for entry in &entries {
                 egui::Frame::NONE
                     .fill(theme::BG_INPUT)
-                    .rounding(6.0)
+                    .corner_radius(6.0)
                     .inner_margin(8.0)
                     .show(ui, |ui| {
                         ui.horizontal(|ui| {

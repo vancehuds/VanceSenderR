@@ -41,8 +41,8 @@ pub fn render_sidebar(ui: &mut egui::Ui, current_panel: &mut Panel) {
 
             let frame = egui::Frame::NONE
                 .fill(bg)
-                .rounding(8.0)
-                .inner_margin(egui::Margin::symmetric(4.0, 8.0));
+                .corner_radius(8.0)
+                .inner_margin(egui::Margin::symmetric(4, 8));
 
             let response = frame.show(ui, |ui| {
                 ui.vertical_centered(|ui| {

@@ -1,13 +1,13 @@
 /// Preset CRUD routes.
 
-use axum::extract::{Path, Query, State};
+use axum::extract::{Path, Query};
 use axum::Json;
 use serde::Deserialize;
 use serde_json::{json, Value as JsonValue};
 
 use crate::core::presets::{self, now_iso, Preset, TextLine};
 use crate::error::{AppError, AppResult};
-use crate::state::SharedState;
+
 
 #[derive(Deserialize)]
 pub struct PresetCreateRequest {

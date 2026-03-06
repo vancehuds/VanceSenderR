@@ -17,7 +17,7 @@ eframe = { version = "0.31", default-features = false, features = [
     "persistence",
 ] }
 egui_extras = { version = "0.31", features = ["image"] }
-egui-notify = "0.17"
+egui-notify = "0.19"
 
 # HTTP Server
 axum = { version = "0.8", features = ["macros"] }

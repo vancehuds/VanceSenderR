@@ -1,6 +1,6 @@
 /// Dark theme with Glassmorphism-inspired styling.
 
-use eframe::egui::{self, Color32, Rounding, Shadow, Stroke, Visuals};
+use eframe::egui::{self, Color32, CornerRadius, Shadow, Stroke, Visuals};
 
 pub const BG_MAIN: Color32 = Color32::from_rgb(13, 17, 28);
 pub const BG_PANEL: Color32 = Color32::from_rgb(20, 25, 40);
@@ -23,7 +23,7 @@ pub fn apply_theme(ctx: &egui::Context) {
     visuals.window_fill = BG_CARD;
     visuals.window_stroke = Stroke::new(1.0, BORDER);
     visuals.window_shadow = Shadow::NONE;
-    visuals.window_rounding = Rounding::same(8.0);
+    visuals.window_corner_radius = CornerRadius::same(8);
 
     // Panel
     visuals.panel_fill = BG_PANEL;
@@ -31,19 +31,19 @@ pub fn apply_theme(ctx: &egui::Context) {
     // Widgets
     visuals.widgets.noninteractive.bg_fill = BG_CARD;
     visuals.widgets.noninteractive.fg_stroke = Stroke::new(1.0, TEXT_SECONDARY);
-    visuals.widgets.noninteractive.rounding = Rounding::same(6.0);
+    visuals.widgets.noninteractive.corner_radius = CornerRadius::same(6);
 
     visuals.widgets.inactive.bg_fill = BG_INPUT;
     visuals.widgets.inactive.fg_stroke = Stroke::new(1.0, TEXT_PRIMARY);
-    visuals.widgets.inactive.rounding = Rounding::same(6.0);
+    visuals.widgets.inactive.corner_radius = CornerRadius::same(6);
 
     visuals.widgets.hovered.bg_fill = Color32::from_rgb(35, 42, 65);
     visuals.widgets.hovered.fg_stroke = Stroke::new(1.0, TEXT_PRIMARY);
-    visuals.widgets.hovered.rounding = Rounding::same(6.0);
+    visuals.widgets.hovered.corner_radius = CornerRadius::same(6);
 
     visuals.widgets.active.bg_fill = ACCENT;
     visuals.widgets.active.fg_stroke = Stroke::new(1.0, Color32::WHITE);
-    visuals.widgets.active.rounding = Rounding::same(6.0);
+    visuals.widgets.active.corner_radius = CornerRadius::same(6);
 
     // Selection
     visuals.selection.bg_fill = ACCENT.linear_multiply(0.3);

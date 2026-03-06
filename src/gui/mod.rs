@@ -6,11 +6,11 @@ pub mod theme;
 pub mod titlebar;
 pub mod widgets;
 
-use std::sync::Arc;
+
 
 use eframe::egui;
 
-use crate::config;
+
 use crate::core::presets::TextLine;
 use crate::desktop::tray::{TrayCommand, TrayManager};
 use crate::state::SharedState;
@@ -188,7 +188,7 @@ impl VanceSenderApp {
                     }
                 }
                 AsyncResult::BatchSendProgress(progress) => {
-                    self.send_state.progress_index = progress.current;
+                    self.send_state.progress_index = progress.index;
                     self.send_state.progress_total = progress.total;
                     self.send_state.progress_status = progress.status.clone();
                     ctx.request_repaint();

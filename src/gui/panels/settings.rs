@@ -102,7 +102,7 @@ fn setting_row(ui: &mut egui::Ui, label: &str, value: &mut String, hint: &str) {
 fn render_sender_settings(ui: &mut egui::Ui, ss: &mut SettingsState, toasts: &mut egui_notify::Toasts) {
     egui::Frame::NONE
         .fill(theme::BG_CARD)
-        .rounding(10.0)
+        .corner_radius(10.0)
         .inner_margin(16.0)
         .stroke(egui::Stroke::new(1.0, theme::BORDER))
         .show(ui, |ui| {
@@ -147,7 +147,7 @@ fn render_sender_settings(ui: &mut egui::Ui, ss: &mut SettingsState, toasts: &mu
 fn render_server_settings(ui: &mut egui::Ui, ss: &mut SettingsState, toasts: &mut egui_notify::Toasts) {
     egui::Frame::NONE
         .fill(theme::BG_CARD)
-        .rounding(10.0)
+        .corner_radius(10.0)
         .inner_margin(16.0)
         .stroke(egui::Stroke::new(1.0, theme::BORDER))
         .show(ui, |ui| {
@@ -178,7 +178,7 @@ fn render_server_settings(ui: &mut egui::Ui, ss: &mut SettingsState, toasts: &mu
 fn render_ai_settings(ui: &mut egui::Ui, ss: &mut SettingsState, toasts: &mut egui_notify::Toasts) {
     egui::Frame::NONE
         .fill(theme::BG_CARD)
-        .rounding(10.0)
+        .corner_radius(10.0)
         .inner_margin(16.0)
         .stroke(egui::Stroke::new(1.0, theme::BORDER))
         .show(ui, |ui| {
@@ -239,7 +239,7 @@ fn render_ai_settings(ui: &mut egui::Ui, ss: &mut SettingsState, toasts: &mut eg
 fn render_overlay_settings(ui: &mut egui::Ui, ss: &mut SettingsState, toasts: &mut egui_notify::Toasts) {
     egui::Frame::NONE
         .fill(theme::BG_CARD)
-        .rounding(10.0)
+        .corner_radius(10.0)
         .inner_margin(16.0)
         .stroke(egui::Stroke::new(1.0, theme::BORDER))
         .show(ui, |ui| {

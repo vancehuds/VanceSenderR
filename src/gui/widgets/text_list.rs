@@ -26,8 +26,8 @@ pub fn render_text_list(
 
         egui::Frame::NONE
             .fill(theme::BG_CARD)
-            .rounding(8.0)
-            .inner_margin(egui::Margin::symmetric(10.0, 8.0))
+            .corner_radius(8.0)
+            .inner_margin(egui::Margin::symmetric(10, 8))
             .stroke(egui::Stroke::new(1.0, theme::BORDER))
             .show(ui, |ui| {
                 ui.horizontal(|ui| {
